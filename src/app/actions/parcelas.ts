@@ -5,6 +5,7 @@ import { exigirUsuarioComConta } from "@/lib/data/context";
 import type { ResultadoAcao } from "./auth";
 
 function revalidarTudo() {
+  revalidatePath("/cartoes/[id]", "page");
   revalidatePath("/dashboard");
   revalidatePath("/projecao");
   revalidatePath("/check-mes");

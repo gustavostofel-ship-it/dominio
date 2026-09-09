@@ -5,6 +5,7 @@ import { carregarProjecao, statusDoResumo } from "@/lib/data/projecao";
 import { mesAtual, somarMeses, formatarBRL } from "@/lib/calc";
 import { StatusPill } from "@/components/StatusPill";
 import { StatusGauge } from "@/components/StatusGauge";
+import { CategoriaPill } from "@/components/CategoriaDividaFixa";
 
 const NOMES_MES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -36,19 +37,31 @@ export default async function DashboardPage({
   const itensProprios = resumo.itens.filter((i) => i.atribuidoA === "eu");
   const itensTerceiros = resumo.itens.filter((i) => i.atribuidoA !== "eu");
 
-  // Agrupa parcelas de cartão por cartão para exibir "valor da fatura" por cartão.
+  // Agrupa por cartão tanto parcelas de compra quanto dívidas fixas
+  // cobradas no cartão (ex.: assinaturas) para exibir "valor da fatura" por
+  // cartão. Dívidas fixas sem cartão vinculado ficam na seção separada.
   const gruposPorCartao = new Map<string, { cartaoId: string | null; nome: string; itens: typeof itensProprios }>();
-  const dividasFixasProprias = itensProprios.filter((i) => i.origem === "divida_fixa");
+  const dividasFixasProprias = itensProprios.filter((i) => {
+    if (i.origem !== "divida_fixa") return false;
+    const dividaFixaId = i.id.split("|")[0];
+    return !dados.dividasFixasPorId.get(dividaFixaId)?.cartao_id;
+  });
 
   for (const item of itensProprios) {
-    if (item.origem !== "parcela") continue;
-    const cartaoId = dados.parcelaCartaoId.get(item.id) ?? null;
-    const cartao = cartaoId ? dados.cartoesPorId.get(cartaoId) : undefined;
-    const chave = cartaoId ?? "sem-cartao";
-    if (!gruposPorCartao.has(chave)) {
-      gruposPorCartao.set(chave, { cartaoId, nome: cartao?.nome ?? "Cartão", itens: [] });
+    let cartaoId: string | null = null;
+    if (item.origem === "parcela") {
+      cartaoId = dados.parcelaCartaoId.get(item.id) ?? null;
+    } else {
+      const dividaFixaId = item.id.split("|")[0];
+      cartaoId = dados.dividasFixasPorId.get(dividaFixaId)?.cartao_id ?? null;
     }
-    gruposPorCartao.get(chave)!.itens.push(item);
+    if (!cartaoId) continue;
+
+    const cartao = dados.cartoesPorId.get(cartaoId);
+    if (!gruposPorCartao.has(cartaoId)) {
+      gruposPorCartao.set(cartaoId, { cartaoId, nome: cartao?.nome ?? "Cartão", itens: [] });
+    }
+    gruposPorCartao.get(cartaoId)!.itens.push(item);
   }
 
   return (
@@ -140,15 +153,22 @@ export default async function DashboardPage({
             <p className="mt-3 text-sm text-foreground-muted">Nenhuma dívida fixa neste mês.</p>
           ) : (
             <ul className="mt-4 flex flex-col gap-2">
-              {dividasFixasProprias.map((item) => (
-                <li key={item.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-                  <span>{item.nome}</span>
-                  <div className="flex items-center gap-3">
-                    <StatusItemBadge status={item.status} />
-                    <span className="font-semibold">{formatarBRL(item.valorCentavos)}</span>
-                  </div>
-                </li>
-              ))}
+              {dividasFixasProprias.map((item) => {
+                const dividaFixaId = item.id.split("|")[0];
+                const categoria = dados.dividasFixasPorId.get(dividaFixaId)?.categoria;
+                return (
+                  <li key={item.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                    <span className="flex flex-wrap items-center gap-2">
+                      {item.nome}
+                      {categoria && <CategoriaPill categoria={categoria} />}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <StatusItemBadge status={item.status} />
+                      <span className="font-semibold">{formatarBRL(item.valorCentavos)}</span>
+                    </div>
+                  </li>
+                );
+              })}
             </ul>
           )}
         </section>

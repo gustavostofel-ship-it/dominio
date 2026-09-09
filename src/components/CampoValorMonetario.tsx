@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { formatarBRL } from "@/lib/calc";
 
 /**
@@ -29,6 +29,22 @@ export function CampoValorMonetario({
   const [centavosDigitados, setCentavosDigitados] = useState<string>(() =>
     defaultValueReais ? String(Math.round(defaultValueReais * 100)) : ""
   );
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Depois de um envio bem-sucedido, React reseta os campos "não
+  // controlados" do form nativamente (disparando um evento "reset" no
+  // <form>) — mas esse campo é controlado pelo próprio estado React, que
+  // não escuta esse reset sozinho. Sem isso, o valor digitado ficava
+  // preso na tela mesmo depois de salvar, prestes a ser reenviado por
+  // engano na próxima dívida/compra.
+  useEffect(() => {
+    const form = inputRef.current?.closest("form");
+    if (!form) return;
+    const aoResetar = () => setCentavosDigitados(defaultValueReais ? String(Math.round(defaultValueReais * 100)) : "");
+    form.addEventListener("reset", aoResetar);
+    return () => form.removeEventListener("reset", aoResetar);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só precisa religar se o form mudar
+  }, []);
 
   const centavos = Number(centavosDigitados || "0");
   const valorReais = (centavos / 100).toFixed(2);
@@ -46,6 +62,7 @@ export function CampoValorMonetario({
     <label className={`flex flex-col gap-1 text-sm font-medium ${className ?? ""}`}>
       {label}
       <input
+        ref={inputRef}
         type="text"
         inputMode="decimal"
         value={exibicao}

@@ -141,6 +141,7 @@ export async function criarCompraOnboarding(formData: FormData): Promise<Resulta
 }
 
 function revalidarTudo() {
+  revalidatePath("/cartoes/[id]", "page");
   revalidatePath("/dashboard");
   revalidatePath("/projecao");
   revalidatePath("/check-mes");

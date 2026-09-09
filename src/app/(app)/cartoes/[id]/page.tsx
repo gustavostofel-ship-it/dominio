@@ -2,8 +2,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import clsx from "clsx";
 import { exigirUsuarioComConta } from "@/lib/data/context";
-import { formatarBRL, mesAtual, somarMeses } from "@/lib/calc";
-import type { CartaoRow, CompraRow, ParcelaRow } from "@/types/database";
+import {
+  formatarBRL,
+  gerarInstanciasDividasFixas,
+  mesAtual,
+  somarMeses,
+  type DividaFixaDef,
+  type OverrideStatusDividaFixa,
+} from "@/lib/calc";
+import type { CartaoRow, CompraRow, DividaFixaRow, DividaFixaStatusRow, ParcelaRow } from "@/types/database";
 
 const NOMES_MES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -13,6 +20,14 @@ const NOMES_MES = [
 function rotuloMes(mesRef: string): string {
   const [ano, mes] = mesRef.split("-").map(Number);
   return `${NOMES_MES[mes - 1]} de ${ano}`;
+}
+
+function StatusPillItem({ status }: { status: string }) {
+  return (
+    <span className={clsx("status-pill", status === "pendente" ? "status-pill--amarelo" : "status-pill--verde")}>
+      {status === "pendente" ? "Pendente" : status === "pago_no_mes" ? "Pago" : "Quitado antecipado"}
+    </span>
+  );
 }
 
 export default async function FaturaCartaoPage({
@@ -57,15 +72,55 @@ export default async function FaturaCartaoPage({
       : { data: [] };
   const parcelas = (parcelasData ?? []) as ParcelaRow[];
 
-  const itens = parcelas
+  const itensCompra = parcelas
     .map((p) => ({ parcela: p, compra: comprasPorId.get(p.compra_id) }))
     .filter((i) => i.compra)
     .sort((a, b) => a.compra!.descricao.localeCompare(b.compra!.descricao));
 
-  const totalMes = itens.reduce((acc, i) => acc + i.parcela.valor_centavos, 0);
-  const totalPendente = itens
-    .filter((i) => i.parcela.status === "pendente")
-    .reduce((acc, i) => acc + i.parcela.valor_centavos, 0);
+  // Dívidas fixas cobradas nesse cartão (ex.: assinaturas) que se aplicam ao mês selecionado.
+  const { data: dividasFixasData } = await supabase
+    .from("dividas_fixas")
+    .select("*")
+    .eq("cartao_id", id)
+    .eq("conta_id", usuario.conta_id)
+    .eq("ativo", true);
+  const dividasFixas = (dividasFixasData ?? []) as DividaFixaRow[];
+  const dividasFixasPorId = new Map(dividasFixas.map((d) => [d.id, d]));
+
+  const idsDividasFixas = dividasFixas.map((d) => d.id);
+  const { data: statusData } =
+    idsDividasFixas.length > 0
+      ? await supabase
+          .from("dividas_fixas_status")
+          .select("*")
+          .in("divida_fixa_id", idsDividasFixas)
+          .eq("mes_referencia", `${mesSelecionado}-01`)
+      : { data: [] };
+  const statusOverrides = (statusData ?? []) as DividaFixaStatusRow[];
+
+  const dividasDef: DividaFixaDef[] = dividasFixas.map((d) => ({
+    id: d.id,
+    valorCentavos: d.valor_centavos,
+    recorrente: d.recorrente,
+    mesInicio: d.mes_inicio.slice(0, 7),
+    mesFim: d.mes_fim ? d.mes_fim.slice(0, 7) : null,
+    atribuidoA: d.atribuido_a,
+  }));
+  const overrides: OverrideStatusDividaFixa[] = statusOverrides.map((o) => ({
+    dividaFixaId: o.divida_fixa_id,
+    mesReferencia: o.mes_referencia.slice(0, 7),
+    status: o.status,
+    dataPagamentoReal: o.data_pagamento_real,
+  }));
+  const itensDividaFixa = gerarInstanciasDividasFixas(dividasDef, overrides, [mesSelecionado]);
+
+  const totalMes =
+    itensCompra.reduce((acc, i) => acc + i.parcela.valor_centavos, 0) +
+    itensDividaFixa.reduce((acc, i) => acc + i.valorCentavos, 0);
+  const totalPendente =
+    itensCompra.filter((i) => i.parcela.status === "pendente").reduce((acc, i) => acc + i.parcela.valor_centavos, 0) +
+    itensDividaFixa.filter((i) => i.status === "pendente").reduce((acc, i) => acc + i.valorCentavos, 0);
+  const totalItens = itensCompra.length + itensDividaFixa.length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -114,12 +169,12 @@ export default async function FaturaCartaoPage({
       </div>
 
       <section className="card p-6">
-        <h2 className="font-semibold">Compras nesta fatura ({itens.length})</h2>
-        {itens.length === 0 ? (
-          <p className="mt-3 text-sm text-foreground-muted">Nenhuma compra deste cartão vence em {rotuloMes(mesSelecionado)}.</p>
+        <h2 className="font-semibold">Nesta fatura ({totalItens})</h2>
+        {totalItens === 0 ? (
+          <p className="mt-3 text-sm text-foreground-muted">Nada deste cartão vence em {rotuloMes(mesSelecionado)}.</p>
         ) : (
           <ul className="mt-4 flex flex-col gap-2">
-            {itens.map(({ parcela, compra }) => (
+            {itensCompra.map(({ parcela, compra }) => (
               <li
                 key={parcela.id}
                 className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm"
@@ -136,18 +191,29 @@ export default async function FaturaCartaoPage({
                   </p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span
-                    className={clsx(
-                      "status-pill",
-                      parcela.status === "pendente" ? "status-pill--amarelo" : "status-pill--verde"
-                    )}
-                  >
-                    {parcela.status === "pendente" ? "Pendente" : parcela.status === "pago_no_mes" ? "Pago" : "Quitado antecipado"}
-                  </span>
+                  <StatusPillItem status={parcela.status} />
                   <span className="font-semibold">{formatarBRL(parcela.valor_centavos)}</span>
                 </div>
               </li>
             ))}
+            {itensDividaFixa.map((inst) => {
+              const divida = dividasFixasPorId.get(inst.dividaFixaId);
+              return (
+                <li
+                  key={inst.dividaFixaId}
+                  className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm"
+                >
+                  <div>
+                    <p className="font-medium">{divida?.nome ?? "(dívida removida)"}</p>
+                    <p className="text-xs text-foreground-muted">Assinatura/dívida fixa recorrente</p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <StatusPillItem status={inst.status} />
+                    <span className="font-semibold">{formatarBRL(inst.valorCentavos)}</span>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

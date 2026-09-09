@@ -6,6 +6,13 @@
 export type Papel = "owner" | "membro";
 export type StatusItem = "pendente" | "pago_no_mes" | "quitado_antecipado";
 export type StatusDivisao = "a_cobrar" | "recebido";
+/**
+ * Classificação de uma dívida fixa, pra dar pra distinguir o que é
+ * essencial (fixa) do que é cortável (assinatura) e do que é dinheiro
+ * devido a uma pessoa específica (divida_pessoa) — não um compromisso
+ * tipo aluguel.
+ */
+export type CategoriaDividaFixa = "fixa" | "assinatura" | "divida_pessoa";
 
 export interface ContaRow {
   id: string;
@@ -45,6 +52,9 @@ export interface DividaFixaRow {
   mes_inicio: string; // date "YYYY-MM-DD"
   mes_fim: string | null;
   atribuido_a: string;
+  /** Cartão em que essa dívida fixa é cobrada, se houver (ex.: assinatura no cartão). */
+  cartao_id: string | null;
+  categoria: CategoriaDividaFixa;
   ativo: boolean;
   criado_por: string | null;
   criado_em: string;
