@@ -125,13 +125,21 @@ export async function criarCompra(formData: FormData): Promise<ResultadoAcao> {
 export async function criarCompraOnboarding(formData: FormData): Promise<ResultadoAcao> {
   const descricaoInformada = String(formData.get("descricao") ?? "").trim();
 
+  const divisoesJson = String(formData.get("divisoes_json") ?? "[]");
+  let divisoes: DivisaoInput[] = [];
+  try {
+    divisoes = JSON.parse(divisoesJson);
+  } catch {
+    divisoes = [];
+  }
+
   return inserirCompraComParcelas({
     cartaoId: String(formData.get("cartao_id") ?? ""),
     descricao: descricaoInformada || "Dívida migrada da planilha",
     valor: Number(formData.get("valor")),
     numeroParcelas: Number(formData.get("numero_parcelas") || 1),
     mesInicio: String(formData.get("mes_inicio") ?? mesAtual()),
-    atribuidoA: "eu",
-    divisoes: [],
+    atribuidoA: String(formData.get("atribuido_a") ?? "eu").trim() || "eu",
+    divisoes,
   });
 }
