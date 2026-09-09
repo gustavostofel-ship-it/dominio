@@ -126,6 +126,19 @@ export function IconClose({ className = base }: IconProps) {
   );
 }
 
+export function IconRefresh({ className = base }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>
+      <path
+        d="M4.5 12a7.5 7.5 0 0 1 12.6-5.5M19.5 12a7.5 7.5 0 0 1-12.6 5.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path d="M17.5 3.5v3.5H14M6.5 20.5V17H10" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 export function IconLogout({ className = base }: IconProps) {
   return (
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className={className}>

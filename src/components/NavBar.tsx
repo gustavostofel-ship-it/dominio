@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import clsx from "clsx";
 import { sair } from "@/app/actions/auth";
+import { BotaoAtualizar } from "@/components/BotaoAtualizar";
 import {
   IconDashboard,
   IconCheck,
@@ -67,6 +68,7 @@ export function NavBar({ nomeUsuario, papel }: { nomeUsuario: string; papel: str
         >
           Domínio
         </Link>
+        <BotaoAtualizar className="ml-auto" />
       </header>
 
       {/* Backdrop do drawer mobile */}
@@ -95,6 +97,7 @@ export function NavBar({ nomeUsuario, papel }: { nomeUsuario: string; papel: str
               {nomeUsuario} · {papel === "owner" ? "dono da conta" : "membro"}
             </p>
           </div>
+          <BotaoAtualizar className="hidden md:block" />
           <button
             onClick={() => setAberto(false)}
             aria-label="Fechar menu"
