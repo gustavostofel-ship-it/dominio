@@ -51,11 +51,9 @@ export function NavBar({ nomeUsuario, papel }: { nomeUsuario: string; papel: str
 
   return (
     <>
-      {/* Topbar mobile */}
-      <header className="flex items-center justify-between border-b border-border bg-surface px-4 py-3 md:hidden">
-        <Link href="/dashboard" className="text-lg font-bold text-verde-700">
-          Domínio
-        </Link>
+      {/* Topbar mobile — o botão fica do MESMO lado de onde a gaveta abre (esquerda),
+          senão a animação parece não ter relação com o botão que a acionou. */}
+      <header className="relative flex items-center border-b border-border bg-surface px-4 py-3 md:hidden">
         <button
           onClick={() => setAberto(true)}
           aria-label="Abrir menu"
@@ -63,6 +61,12 @@ export function NavBar({ nomeUsuario, papel }: { nomeUsuario: string; papel: str
         >
           <IconMenu />
         </button>
+        <Link
+          href="/dashboard"
+          className="absolute left-1/2 -translate-x-1/2 text-lg font-bold text-verde-700"
+        >
+          Domínio
+        </Link>
       </header>
 
       {/* Backdrop do drawer mobile */}
