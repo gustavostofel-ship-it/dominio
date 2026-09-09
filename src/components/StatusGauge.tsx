@@ -42,19 +42,16 @@ export function StatusGauge({
 
   return (
     <div className="flex flex-col items-center">
-      <svg viewBox="10 10 180 100" className="w-48">
+      <svg viewBox="10 10 180 108" className="w-48">
         <path d={fundo} fill="none" stroke="var(--color-verde-100)" strokeWidth="16" strokeLinecap="round" />
         {fracao > 0 && (
           <path d={frente} fill="none" stroke={CORES[status]} strokeWidth="16" strokeLinecap="round" />
         )}
-        <text x={cx} y={cy - 8} textAnchor="middle" fontSize="26" fontWeight="700" fill="var(--foreground)">
+        <text x={cx} y={cy - 6} textAnchor="middle" fontSize="26" fontWeight="700" fill="var(--foreground)">
           {Math.round(percentual)}%
         </text>
-        <text x={cx} y={cy + 12} textAnchor="middle" fontSize="9" fill="var(--foreground-muted)">
-          da renda esperada
-        </text>
       </svg>
-      <p className="-mt-2 text-xs font-medium text-foreground-muted">{rotulo}</p>
+      <p className="mt-1 text-xs font-medium text-foreground-muted">{rotulo}</p>
     </div>
   );
 }

@@ -61,7 +61,13 @@ export function OnboardingForm({ cartoes }: { cartoes: CartaoRow[] }) {
         </label>
         <Campo label="Valor total restante (R$)" name="valor" type="number" step="0.01" min="0.01" required />
         <Campo label="Parcelas restantes" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
-        <input type="hidden" name="mes_inicio" value={mesAtual()} />
+        <Campo
+          label="Mês da próxima parcela a pagar"
+          name="mes_inicio"
+          type="month"
+          defaultValue={mesAtual()}
+          required
+        />
         <Campo
           label="Nome (opcional)"
           name="descricao"
