@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { criarCompra } from "@/app/actions/compras";
 import { Campo } from "@/components/Campo";
+import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { mesAtual } from "@/lib/calc";
 import type { CartaoRow } from "@/types/database";
 
@@ -14,12 +15,12 @@ interface Divisao {
 
 export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
   const router = useRouter();
-  const [tipoResponsavel, setTipoResponsavel] = useState<"eu" | "terceiro">("eu");
-  const [nomeTerceiro, setNomeTerceiro] = useState("");
+  const [responsavel, setResponsavel] = useState("eu");
   const [divisoes, setDivisoes] = useState<Divisao[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
 
+  const ehNos = responsavel === "eu";
   const divisoesJson = useMemo(() => JSON.stringify(divisoes.map((d) => ({ nome: d.nome, valor: Number(d.valor) }))), [divisoes]);
 
   function adicionarDivisao() {
@@ -37,8 +38,8 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
   async function aoSubmeter(formData: FormData) {
     setErro(null);
     setEnviando(true);
-    formData.set("atribuido_a", tipoResponsavel === "eu" ? "eu" : nomeTerceiro || "Terceiro");
-    formData.set("divisoes_json", tipoResponsavel === "eu" ? divisoesJson : "[]");
+    // atribuido_a já vem preenchido pelo campo hidden do SeletorResponsavel
+    formData.set("divisoes_json", ehNos ? divisoesJson : "[]");
 
     const resultado = await criarCompra(formData);
     setEnviando(false);
@@ -73,42 +74,9 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
         <Campo label="Descrição" name="descricao" placeholder="Ex.: Shopee (casamento)" required className="sm:col-span-2" />
       </div>
 
-      <fieldset className="rounded-lg border border-border p-4">
-        <legend className="px-1 text-sm font-semibold">De quem é esse gasto?</legend>
-        <div className="mt-2 flex flex-col gap-3">
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="_tipo_responsavel"
-              checked={tipoResponsavel === "eu"}
-              onChange={() => setTipoResponsavel("eu")}
-              className="h-4 w-4 accent-verde-600"
-            />
-            É meu (conta no meu total)
-          </label>
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="radio"
-              name="_tipo_responsavel"
-              checked={tipoResponsavel === "terceiro"}
-              onChange={() => setTipoResponsavel("terceiro")}
-              className="h-4 w-4 accent-verde-600"
-            />
-            É 100% de outra pessoa (ex.: emprestei o cartão)
-          </label>
-          {tipoResponsavel === "terceiro" && (
-            <input
-              value={nomeTerceiro}
-              onChange={(e) => setNomeTerceiro(e.target.value)}
-              placeholder="Nome da pessoa"
-              autoComplete="off"
-              className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
-            />
-          )}
-        </div>
-      </fieldset>
+      <SeletorResponsavel rotulo="De quem é esse gasto?" aoMudar={setResponsavel} />
 
-      {tipoResponsavel === "eu" && (
+      {ehNos && (
         <fieldset className="rounded-lg border border-border p-4">
           <legend className="px-1 text-sm font-semibold">Alguém vai te pagar uma parte? (opcional)</legend>
           <div className="mt-2 flex flex-col gap-3">
@@ -117,7 +85,9 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
                 <input
                   value={divisao.nome}
                   onChange={(e) => atualizarDivisao(index, "nome", e.target.value)}
-                  placeholder="Nome da pessoa"
+                  placeholder="Nome da pessoa (obrigatório)"
+                  autoComplete="off"
+                  required
                   className="flex-1 rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
                 />
                 <input

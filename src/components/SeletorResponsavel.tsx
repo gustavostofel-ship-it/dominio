@@ -1,32 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
- * Escolha explícita de responsável (eu vs. terceiro), usada em qualquer
- * formulário que tenha o campo `atribuido_a`.
+ * Escolha explícita de responsável por um gasto/dívida:
  *
- * Por que isso existe: a versão anterior era um campo de texto livre com
- * valor padrão "eu" — o preenchimento automático do navegador podia
- * substituir esse valor pelo nome salvo do usuário sem ele perceber,
- * fazendo uma dívida seria seja marcada como "de terceiro" por engano.
- * Com radio buttons isso não pode acontecer: o valor só muda se a pessoa
- * clicar explicitamente na segunda opção.
+ * - "Nós" — a conta é compartilhada pela família (ex.: você + esposa), então
+ *   isso NÃO é "eu" no sentido individual; é o total da família/conta.
+ *   Internamente ainda gravamos como "eu" (o valor sentinela usado pelo
+ *   motor de cálculo para "conta no total da conta"), só a rotulagem muda.
+ * - "Outro" — 100% de responsabilidade de alguém de fora da conta. Exige um
+ *   nome (campo obrigatório) — não dá pra marcar "outro" sem dizer quem é.
+ *
+ * Usa radio buttons (não texto livre) de propósito: um campo de texto com
+ * valor padrão "eu" já causou uma dívida real ser marcada como "de
+ * terceiro" por autopreenchimento do navegador. Com radio, só muda se a
+ * pessoa clicar.
  */
 export function SeletorResponsavel({
   valorInicial = "eu",
   nomeCampo = "atribuido_a",
   rotulo = "De quem é isso?",
+  aoMudar,
 }: {
   valorInicial?: string;
   nomeCampo?: string;
   rotulo?: string;
+  /** Chamado sempre que o valor final (a ser gravado em atribuido_a) muda. */
+  aoMudar?: (valor: string) => void;
 }) {
-  const ehTerceiroInicial = valorInicial !== "eu";
-  const [tipo, setTipo] = useState<"eu" | "terceiro">(ehTerceiroInicial ? "terceiro" : "eu");
-  const [nomeTerceiro, setNomeTerceiro] = useState(ehTerceiroInicial ? valorInicial : "");
+  const ehOutroInicial = valorInicial !== "eu";
+  const [tipo, setTipo] = useState<"nos" | "outro">(ehOutroInicial ? "outro" : "nos");
+  const [nomeOutro, setNomeOutro] = useState(ehOutroInicial ? valorInicial : "");
 
-  const valorFinal = tipo === "eu" ? "eu" : nomeTerceiro.trim() || "Terceiro";
+  const valorFinal = tipo === "nos" ? "eu" : nomeOutro.trim();
+
+  useEffect(() => {
+    aoMudar?.(valorFinal);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- só queremos disparar quando o valor final muda
+  }, [valorFinal]);
 
   return (
     <fieldset className="flex flex-col gap-2 sm:col-span-2">
@@ -35,27 +47,28 @@ export function SeletorResponsavel({
         <label className="flex items-center gap-2 text-sm">
           <input
             type="radio"
-            checked={tipo === "eu"}
-            onChange={() => setTipo("eu")}
+            checked={tipo === "nos"}
+            onChange={() => setTipo("nos")}
             className="h-4 w-4 accent-verde-600"
           />
-          É meu (conta no meu total)
+          Nós (conta no total da conta)
         </label>
         <label className="flex items-center gap-2 text-sm">
           <input
             type="radio"
-            checked={tipo === "terceiro"}
-            onChange={() => setTipo("terceiro")}
+            checked={tipo === "outro"}
+            onChange={() => setTipo("outro")}
             className="h-4 w-4 accent-verde-600"
           />
-          É 100% de outra pessoa (ex.: emprestei o cartão)
+          Outro (é 100% de outra pessoa)
         </label>
-        {tipo === "terceiro" && (
+        {tipo === "outro" && (
           <input
-            value={nomeTerceiro}
-            onChange={(e) => setNomeTerceiro(e.target.value)}
-            placeholder="Nome da pessoa"
+            value={nomeOutro}
+            onChange={(e) => setNomeOutro(e.target.value)}
+            placeholder="Nome da pessoa (obrigatório)"
             autoComplete="off"
+            required
             className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
           />
         )}
