@@ -1,0 +1,91 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --surface: #ffffff;
+  --surface-muted: #f4faf6;
+  --foreground: #0f2418;
+  --foreground-muted: #4b6358;
+  --border: #d8ece0;
+
+  --verde-50: #f0fdf4;
+  --verde-100: #dcfce7;
+  --verde-200: #bbf0cf;
+  --verde-500: #16a34a;
+  --verde-600: #15803d;
+  --verde-700: #14532d;
+  --verde-900: #0d2e1c;
+
+  --amarelo-100: #fef9c3;
+  --amarelo-600: #ca8a04;
+  --amarelo-700: #854d0e;
+
+  --vermelho-100: #fee2e2;
+  --vermelho-600: #dc2626;
+  --vermelho-700: #991b1b;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-foreground-muted: var(--foreground-muted);
+  --color-border: var(--border);
+
+  --color-verde-50: var(--verde-50);
+  --color-verde-100: var(--verde-100);
+  --color-verde-200: var(--verde-200);
+  --color-verde-500: var(--verde-500);
+  --color-verde-600: var(--verde-600);
+  --color-verde-700: var(--verde-700);
+  --color-verde-900: var(--verde-900);
+
+  --color-amarelo-100: var(--amarelo-100);
+  --color-amarelo-600: var(--amarelo-600);
+  --color-amarelo-700: var(--amarelo-700);
+
+  --color-vermelho-100: var(--vermelho-100);
+  --color-vermelho-600: var(--vermelho-600);
+  --color-vermelho-700: var(--vermelho-700);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.75rem;
+}
+
+.status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.125rem 0.625rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.status-pill--verde {
+  background: var(--verde-100);
+  color: var(--verde-700);
+}
+
+.status-pill--amarelo {
+  background: var(--amarelo-100);
+  color: var(--amarelo-700);
+}
+
+.status-pill--vermelho {
+  background: var(--vermelho-100);
+  color: var(--vermelho-700);
+}

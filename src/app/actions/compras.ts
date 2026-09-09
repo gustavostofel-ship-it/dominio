@@ -1,0 +1,137 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { exigirUsuarioComConta } from "@/lib/data/context";
+import { gerarParcelas, reaisParaCentavos, mesAtual } from "@/lib/calc";
+import type { ResultadoAcao } from "./auth";
+
+interface DivisaoInput {
+  nome: string;
+  valor: number;
+}
+
+async function inserirCompraComParcelas(params: {
+  cartaoId: string;
+  descricao: string;
+  valor: number;
+  numeroParcelas: number;
+  mesInicio: string;
+  atribuidoA: string;
+  divisoes: DivisaoInput[];
+}): Promise<ResultadoAcao> {
+  const { supabase, usuario } = await exigirUsuarioComConta();
+  const { cartaoId, descricao, valor, numeroParcelas, mesInicio, atribuidoA, divisoes } = params;
+
+  if (!cartaoId) return { erro: "Selecione um cartão." };
+  if (!Number.isFinite(valor) || valor <= 0) return { erro: "Valor inválido." };
+  if (!Number.isInteger(numeroParcelas) || numeroParcelas < 1) return { erro: "Número de parcelas inválido." };
+  if (!mesInicio) return { erro: "Informe o mês de início." };
+
+  const valorTotalCentavos = reaisParaCentavos(valor);
+
+  const { data: compra, error: erroCompra } = await supabase
+    .from("compras")
+    .insert({
+      conta_id: usuario.conta_id,
+      cartao_id: cartaoId,
+      descricao,
+      valor_total_centavos: valorTotalCentavos,
+      numero_parcelas: numeroParcelas,
+      mes_inicio: `${mesInicio}-01`,
+      atribuido_a: atribuidoA,
+      criado_por: usuario.id,
+    })
+    .select("id")
+    .single();
+
+  if (erroCompra || !compra) {
+    return { erro: erroCompra?.message ?? "Falha ao criar compra." };
+  }
+
+  // Regra de cálculo #1: geração determinística das parcelas, com o
+  // arredondamento absorvido pela última parcela.
+  const parcelas = gerarParcelas({ valorTotalCentavos, numeroParcelas, mesInicio });
+
+  const { error: erroParcelas } = await supabase.from("parcelas").insert(
+    parcelas.map((p) => ({
+      conta_id: usuario.conta_id,
+      compra_id: compra.id,
+      numero_da_parcela: p.numeroDaParcela,
+      mes_referencia: `${p.mesReferencia}-01`,
+      valor_centavos: p.valorCentavos,
+      status: "pendente" as const,
+    }))
+  );
+
+  if (erroParcelas) {
+    // limpa a compra órfã para não deixar dado inconsistente
+    await supabase.from("compras").delete().eq("id", compra.id);
+    return { erro: erroParcelas.message };
+  }
+
+  const divisoesValidas = divisoes.filter((d) => d.nome.trim() && Number.isFinite(d.valor) && d.valor > 0);
+  if (divisoesValidas.length > 0) {
+    const { error: erroDivisoes } = await supabase.from("divisoes_gasto").insert(
+      divisoesValidas.map((d) => ({
+        conta_id: usuario.conta_id,
+        compra_id: compra.id,
+        nome_da_pessoa: d.nome.trim(),
+        valor_centavos: reaisParaCentavos(d.valor),
+        status: "a_cobrar" as const,
+        mes_referencia: `${mesInicio}-01`,
+      }))
+    );
+    if (erroDivisoes) return { erro: erroDivisoes.message };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/projecao");
+  revalidatePath("/check-mes");
+  revalidatePath("/historico");
+  revalidatePath("/a-receber");
+  return {};
+}
+
+/** Fluxo completo de lançamento de gasto (7.3) — nome/descrição obrigatório. */
+export async function criarCompra(formData: FormData): Promise<ResultadoAcao> {
+  const descricao = String(formData.get("descricao") ?? "").trim();
+  if (!descricao) return { erro: "A descrição do gasto é obrigatória." };
+
+  const divisoesJson = String(formData.get("divisoes_json") ?? "[]");
+  let divisoes: DivisaoInput[] = [];
+  try {
+    divisoes = JSON.parse(divisoesJson);
+  } catch {
+    divisoes = [];
+  }
+
+  return inserirCompraComParcelas({
+    cartaoId: String(formData.get("cartao_id") ?? ""),
+    descricao,
+    valor: Number(formData.get("valor")),
+    numeroParcelas: Number(formData.get("numero_parcelas") || 1),
+    mesInicio: String(formData.get("mes_inicio") ?? mesAtual()),
+    atribuidoA: String(formData.get("atribuido_a") ?? "eu").trim() || "eu",
+    divisoes,
+  });
+}
+
+/**
+ * Onboarding rápido de migração (7.1) — permite cadastrar uma dívida já
+ * existente na planilha só com valor + parcelas restantes + cartão, sem
+ * nome detalhado. O sistema já passa a contabilizá-la corretamente desde
+ * o primeiro dia.
+ */
+export async function criarCompraOnboarding(formData: FormData): Promise<ResultadoAcao> {
+  const descricaoInformada = String(formData.get("descricao") ?? "").trim();
+
+  return inserirCompraComParcelas({
+    cartaoId: String(formData.get("cartao_id") ?? ""),
+    descricao: descricaoInformada || "Dívida migrada da planilha",
+    valor: Number(formData.get("valor")),
+    numeroParcelas: Number(formData.get("numero_parcelas") || 1),
+    mesInicio: String(formData.get("mes_inicio") ?? mesAtual()),
+    atribuidoA: "eu",
+    divisoes: [],
+  });
+}

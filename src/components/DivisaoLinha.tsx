@@ -1,0 +1,44 @@
+"use client";
+
+import { useTransition } from "react";
+import { marcarDivisaoRecebida, marcarDivisaoAReceber } from "@/app/actions/divisoes";
+import { formatarBRL } from "@/lib/calc";
+import type { DivisaoGastoRow } from "@/types/database";
+
+export function DivisaoLinha({
+  divisao,
+  descricaoCompra,
+}: {
+  divisao: DivisaoGastoRow;
+  descricaoCompra?: string;
+}) {
+  const [pending, startTransition] = useTransition();
+  const recebido = divisao.status === "recebido";
+
+  function alternar() {
+    const formData = new FormData();
+    formData.set("id", divisao.id);
+    startTransition(() => {
+      (recebido ? marcarDivisaoAReceber : marcarDivisaoRecebida)(formData);
+    });
+  }
+
+  return (
+    <li className="flex items-center justify-between rounded-lg border border-border px-4 py-3 text-sm">
+      <div>
+        <p className={recebido ? "text-foreground-muted line-through" : ""}>{descricaoCompra ?? "(compra removida)"}</p>
+        <p className="text-xs text-foreground-muted">Referente a {divisao.mes_referencia.slice(0, 7)}</p>
+      </div>
+      <div className="flex items-center gap-3">
+        <span className="font-semibold">{formatarBRL(divisao.valor_centavos)}</span>
+        <button
+          onClick={alternar}
+          disabled={pending}
+          className="rounded-lg border border-border px-3 py-1 text-xs font-medium hover:bg-surface-muted disabled:opacity-60"
+        >
+          {recebido ? "Marcar a receber" : "Marcar recebido"}
+        </button>
+      </div>
+    </li>
+  );
+}
