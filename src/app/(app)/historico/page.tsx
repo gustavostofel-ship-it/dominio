@@ -1,6 +1,6 @@
 import { exigirUsuarioComConta } from "@/lib/data/context";
-import { formatarBRL } from "@/lib/calc";
-import type { CompraRow, ParcelaRow, UsuarioRow } from "@/types/database";
+import { CompraCard } from "@/components/CompraCard";
+import type { CartaoRow, CompraRow, ParcelaRow, UsuarioRow } from "@/types/database";
 
 interface FiltrosHistorico {
   q?: string;
@@ -38,6 +38,13 @@ export default async function HistoricoPage({
 
   const { data: usuariosData } = await supabase.from("usuarios").select("*").eq("conta_id", usuario.conta_id);
   const usuarios = new Map(((usuariosData ?? []) as UsuarioRow[]).map((u) => [u.id, u.nome]));
+
+  const { data: cartoesData } = await supabase
+    .from("cartoes")
+    .select("*")
+    .eq("conta_id", usuario.conta_id)
+    .order("nome");
+  const cartoes = (cartoesData ?? []) as CartaoRow[];
 
   const parcelasPorCompra = new Map<string, ParcelaRow[]>();
   for (const p of parcelas) {
@@ -87,39 +94,15 @@ export default async function HistoricoPage({
         {comprasFiltradas.length === 0 ? (
           <p className="card p-6 text-sm text-foreground-muted">Nenhuma compra encontrada com esses filtros.</p>
         ) : (
-          comprasFiltradas.map((compra) => {
-            const ps = (parcelasPorCompra.get(compra.id) ?? []).sort((a, b) => a.numero_da_parcela - b.numero_da_parcela);
-            const ehTerceiro = compra.atribuido_a !== "eu";
-            return (
-              <div key={compra.id} className="card p-5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-semibold">
-                      {compra.descricao}
-                      {ehTerceiro && <span className="ml-2 status-pill status-pill--amarelo">de {compra.atribuido_a}</span>}
-                    </p>
-                    <p className="text-xs text-foreground-muted">
-                      Lançado por {usuarios.get(compra.criado_por ?? "") ?? "—"} em{" "}
-                      {new Date(compra.criado_em).toLocaleDateString("pt-BR")} · {compra.numero_parcelas}x
-                    </p>
-                  </div>
-                  <p className="font-semibold">{formatarBRL(compra.valor_total_centavos)}</p>
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  {ps.map((p) => (
-                    <span
-                      key={p.id}
-                      className={`status-pill ${
-                        p.status === "pendente" ? "status-pill--amarelo" : "status-pill--verde"
-                      }`}
-                    >
-                      {p.mes_referencia.slice(0, 7)} · {formatarBRL(p.valor_centavos)}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            );
-          })
+          comprasFiltradas.map((compra) => (
+            <CompraCard
+              key={compra.id}
+              compra={compra}
+              parcelas={parcelasPorCompra.get(compra.id) ?? []}
+              cartoes={cartoes}
+              nomeCriador={usuarios.get(compra.criado_por ?? "") ?? "—"}
+            />
+          ))
         )}
       </section>
     </div>

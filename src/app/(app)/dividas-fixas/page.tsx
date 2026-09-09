@@ -4,6 +4,7 @@ import type { DividaFixaRow } from "@/types/database";
 import { FormComErro } from "@/components/FormComErro";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Campo } from "@/components/Campo";
+import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { DividaFixaLinha } from "@/components/DividaFixaLinha";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { mesAtual } from "@/lib/calc";
@@ -33,7 +34,7 @@ export default async function DividasFixasPage() {
         <h2 className="font-semibold">Nova dívida fixa</h2>
         <FormComErro action={criarDividaFixa} className="mt-4 grid gap-4 sm:grid-cols-2">
           <Campo label="Nome" name="nome" placeholder="Ex.: Aluguel" required />
-          <Campo label="Valor (R$)" name="valor" type="number" step="0.01" min="0.01" required />
+          <CampoValorMonetario label="Valor" name="valor" required />
           <Campo label="Dia de vencimento" name="dia_vencimento" type="number" min={1} max={31} required />
           <Campo label="Mês de início" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
           <Campo label="Mês final (opcional, se tiver prazo)" name="mes_fim" type="month" />

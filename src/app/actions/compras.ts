@@ -84,11 +84,7 @@ async function inserirCompraComParcelas(params: {
     if (erroDivisoes) return { erro: erroDivisoes.message };
   }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/projecao");
-  revalidatePath("/check-mes");
-  revalidatePath("/historico");
-  revalidatePath("/a-receber");
+  revalidarTudo();
   return {};
 }
 
@@ -142,4 +138,94 @@ export async function criarCompraOnboarding(formData: FormData): Promise<Resulta
     atribuidoA: String(formData.get("atribuido_a") ?? "eu").trim() || "eu",
     divisoes,
   });
+}
+
+function revalidarTudo() {
+  revalidatePath("/dashboard");
+  revalidatePath("/projecao");
+  revalidatePath("/check-mes");
+  revalidatePath("/historico");
+  revalidatePath("/a-receber");
+  revalidatePath("/cartoes");
+}
+
+/**
+ * Edita uma compra já lançada. Importante: as parcelas de uma compra são
+ * geradas (materializadas) uma única vez na criação — mudar o valor, o
+ * número de parcelas ou o mês de início na tabela `compras` diretamente
+ * (ex.: editando pelo Table Editor do Supabase) NÃO recalcula as parcelas
+ * já existentes, então a projeção continua com os valores antigos. Por
+ * isso editar sempre precisa passar por aqui: apagamos as parcelas
+ * antigas e geramos novas do zero — o que também significa que qualquer
+ * parcela já marcada como paga/quitada volta para "pendente".
+ */
+export async function atualizarCompra(formData: FormData): Promise<ResultadoAcao> {
+  const { supabase, usuario } = await exigirUsuarioComConta();
+
+  const compraId = String(formData.get("id") ?? "");
+  const cartaoId = String(formData.get("cartao_id") ?? "");
+  const descricao = String(formData.get("descricao") ?? "").trim();
+  const valor = Number(formData.get("valor"));
+  const numeroParcelas = Number(formData.get("numero_parcelas") || 1);
+  const mesInicio = String(formData.get("mes_inicio") ?? "");
+  const atribuidoA = String(formData.get("atribuido_a") ?? "eu").trim() || "eu";
+
+  if (!compraId) return { erro: "Compra inválida." };
+  if (!cartaoId) return { erro: "Selecione um cartão." };
+  if (!descricao) return { erro: "A descrição do gasto é obrigatória." };
+  if (!Number.isFinite(valor) || valor <= 0) return { erro: "Valor inválido." };
+  if (!Number.isInteger(numeroParcelas) || numeroParcelas < 1) return { erro: "Número de parcelas inválido." };
+  if (!mesInicio) return { erro: "Informe o mês de início." };
+
+  const valorTotalCentavos = reaisParaCentavos(valor);
+
+  const { error: erroUpdate } = await supabase
+    .from("compras")
+    .update({
+      cartao_id: cartaoId,
+      descricao,
+      valor_total_centavos: valorTotalCentavos,
+      numero_parcelas: numeroParcelas,
+      mes_inicio: `${mesInicio}-01`,
+      atribuido_a: atribuidoA,
+      editado_por: usuario.id,
+      editado_em: new Date().toISOString(),
+    })
+    .eq("id", compraId)
+    .eq("conta_id", usuario.conta_id);
+
+  if (erroUpdate) return { erro: erroUpdate.message };
+
+  // Regenera as parcelas do zero a partir dos novos valores.
+  const { error: erroApagar } = await supabase.from("parcelas").delete().eq("compra_id", compraId);
+  if (erroApagar) return { erro: erroApagar.message };
+
+  const parcelas = gerarParcelas({ valorTotalCentavos, numeroParcelas, mesInicio });
+  const { error: erroParcelas } = await supabase.from("parcelas").insert(
+    parcelas.map((p) => ({
+      conta_id: usuario.conta_id,
+      compra_id: compraId,
+      numero_da_parcela: p.numeroDaParcela,
+      mes_referencia: `${p.mesReferencia}-01`,
+      valor_centavos: p.valorCentavos,
+      status: "pendente" as const,
+    }))
+  );
+  if (erroParcelas) return { erro: erroParcelas.message };
+
+  revalidarTudo();
+  return {};
+}
+
+/** Exclui uma compra e tudo o que depende dela (parcelas, divisões) em cascata. */
+export async function excluirCompra(formData: FormData): Promise<ResultadoAcao> {
+  const { supabase, usuario } = await exigirUsuarioComConta();
+  const compraId = String(formData.get("id") ?? "");
+  if (!compraId) return { erro: "Compra inválida." };
+
+  const { error } = await supabase.from("compras").delete().eq("id", compraId).eq("conta_id", usuario.conta_id);
+  if (error) return { erro: error.message };
+
+  revalidarTudo();
+  return {};
 }

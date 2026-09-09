@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { criarCompra } from "@/app/actions/compras";
 import { Campo } from "@/components/Campo";
+import { CampoValorMonetario } from "@/components/CampoValorMonetario";
+import { InputValorMonetario } from "@/components/InputValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { mesAtual } from "@/lib/calc";
 import type { CartaoRow } from "@/types/database";
@@ -68,7 +70,7 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <Campo label="Valor total (R$)" name="valor" type="number" step="0.01" min="0.01" required />
+        <CampoValorMonetario label="Valor total" name="valor" required />
         <Campo label="Número de parcelas" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
         <Campo label="Mês de início" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
         <Campo label="Descrição" name="descricao" placeholder="Ex.: Shopee (casamento)" required className="sm:col-span-2" />
@@ -90,12 +92,9 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
                   required
                   className="flex-1 rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
                 />
-                <input
-                  value={divisao.valor}
-                  onChange={(e) => atualizarDivisao(index, "valor", e.target.value)}
-                  type="number"
-                  step="0.01"
-                  placeholder="Valor (R$)"
+                <InputValorMonetario
+                  valorReais={divisao.valor}
+                  onChange={(v) => atualizarDivisao(index, "valor", v)}
                   className="w-32 rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
                 />
                 <button

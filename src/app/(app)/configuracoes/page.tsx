@@ -4,6 +4,7 @@ import type { ConfiguracoesRow } from "@/types/database";
 import { FormComErro } from "@/components/FormComErro";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Campo } from "@/components/Campo";
+import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 
 export default async function ConfiguracoesPage() {
   const { supabase, usuario } = await exigirUsuarioComConta();
@@ -34,22 +35,16 @@ export default async function ConfiguracoesPage() {
 
       <section className="card p-6">
         <FormComErro action={atualizarConfiguracoes} className="grid gap-4 sm:grid-cols-2">
-          <Campo
-            label="Renda mensal esperada (R$)"
+          <CampoValorMonetario
+            label="Renda mensal esperada"
             name="renda_mensal_esperada"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={config.renda_mensal_esperada_centavos / 100}
+            defaultValueReais={config.renda_mensal_esperada_centavos / 100}
             required
           />
-          <Campo
-            label="Limite de uso do cartão este mês (R$, opcional)"
+          <CampoValorMonetario
+            label="Limite de uso do cartão este mês (opcional)"
             name="limite_uso_cartao_mes"
-            type="number"
-            step="0.01"
-            min="0"
-            defaultValue={config.limite_uso_cartao_mes_centavos ? config.limite_uso_cartao_mes_centavos / 100 : ""}
+            defaultValueReais={config.limite_uso_cartao_mes_centavos ? config.limite_uso_cartao_mes_centavos / 100 : undefined}
           />
           <Campo
             label="Faixa verde até (% da renda)"

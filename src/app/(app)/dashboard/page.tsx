@@ -37,16 +37,16 @@ export default async function DashboardPage({
   const itensTerceiros = resumo.itens.filter((i) => i.atribuidoA !== "eu");
 
   // Agrupa parcelas de cartão por cartão para exibir "valor da fatura" por cartão.
-  const gruposPorCartao = new Map<string, { nome: string; itens: typeof itensProprios }>();
+  const gruposPorCartao = new Map<string, { cartaoId: string | null; nome: string; itens: typeof itensProprios }>();
   const dividasFixasProprias = itensProprios.filter((i) => i.origem === "divida_fixa");
 
   for (const item of itensProprios) {
     if (item.origem !== "parcela") continue;
-    const cartaoId = dados.parcelaCartaoId.get(item.id);
+    const cartaoId = dados.parcelaCartaoId.get(item.id) ?? null;
     const cartao = cartaoId ? dados.cartoesPorId.get(cartaoId) : undefined;
     const chave = cartaoId ?? "sem-cartao";
     if (!gruposPorCartao.has(chave)) {
-      gruposPorCartao.set(chave, { nome: cartao?.nome ?? "Cartão", itens: [] });
+      gruposPorCartao.set(chave, { cartaoId, nome: cartao?.nome ?? "Cartão", itens: [] });
     }
     gruposPorCartao.get(chave)!.itens.push(item);
   }
@@ -105,8 +105,8 @@ export default async function DashboardPage({
               {Array.from(gruposPorCartao.entries()).map(([chave, grupo]) => {
                 const total = grupo.itens.reduce((acc, i) => acc + i.valorCentavos, 0);
                 const pendentes = grupo.itens.filter((i) => i.status === "pendente").length;
-                return (
-                  <div key={chave} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                const conteudo = (
+                  <>
                     <div>
                       <p className="font-medium">{grupo.nome}</p>
                       <p className="text-xs text-foreground-muted">
@@ -114,6 +114,19 @@ export default async function DashboardPage({
                       </p>
                     </div>
                     <p className="font-semibold">{formatarBRL(total)}</p>
+                  </>
+                );
+                return grupo.cartaoId ? (
+                  <Link
+                    key={chave}
+                    href={`/cartoes/${grupo.cartaoId}?mes=${mesSelecionado}`}
+                    className="flex items-center justify-between rounded-lg border border-border px-4 py-3 transition-colors hover:border-verde-500 hover:bg-verde-50"
+                  >
+                    {conteudo}
+                  </Link>
+                ) : (
+                  <div key={chave} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                    {conteudo}
                   </div>
                 );
               })}

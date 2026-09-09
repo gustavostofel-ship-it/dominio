@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { atualizarCartao, arquivarCartao } from "@/app/actions/cartoes";
 import { FormComErro } from "@/components/FormComErro";
 import { SubmitButton } from "@/components/SubmitButton";
@@ -13,7 +14,7 @@ export function CartaoLinha({ cartao }: { cartao: CartaoRow }) {
   if (editando) {
     return (
       <li className="rounded-lg border border-border p-4">
-        <FormComErro action={atualizarCartao} className="grid gap-3 sm:grid-cols-3">
+        <FormComErro action={atualizarCartao} onSucesso={() => setEditando(false)} className="grid gap-3 sm:grid-cols-3">
           <input type="hidden" name="id" value={cartao.id} />
           <Campo label="Nome" name="nome" defaultValue={cartao.nome} required />
           <Campo label="Fechamento" name="dia_fechamento" type="number" min={1} max={31} defaultValue={cartao.dia_fechamento} required />
@@ -44,6 +45,9 @@ export function CartaoLinha({ cartao }: { cartao: CartaoRow }) {
         </p>
       </div>
       <div className="flex items-center gap-3">
+        <Link href={`/cartoes/${cartao.id}`} className="text-sm font-medium text-verde-700 hover:underline">
+          Ver fatura
+        </Link>
         <button onClick={() => setEditando(true)} className="text-sm font-medium text-verde-700 hover:underline">
           Editar
         </button>

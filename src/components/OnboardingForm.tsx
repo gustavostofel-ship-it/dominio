@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { criarCompraOnboarding } from "@/app/actions/compras";
 import { Campo } from "@/components/Campo";
+import { CampoValorMonetario } from "@/components/CampoValorMonetario";
+import { InputValorMonetario } from "@/components/InputValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { mesAtual } from "@/lib/calc";
 import type { CartaoRow } from "@/types/database";
@@ -93,7 +95,7 @@ export function OnboardingForm({ cartoes }: { cartoes: CartaoRow[] }) {
             ))}
           </select>
         </label>
-        <Campo label="Valor total restante (R$)" name="valor" type="number" step="0.01" min="0.01" required />
+        <CampoValorMonetario label="Valor total restante" name="valor" required />
         <Campo label="Parcelas restantes" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
         <Campo
           label="Mês da próxima parcela a pagar"
@@ -127,12 +129,9 @@ export function OnboardingForm({ cartoes }: { cartoes: CartaoRow[] }) {
                     required
                     className="flex-1 rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
                   />
-                  <input
-                    value={divisao.valor}
-                    onChange={(e) => atualizarDivisao(index, "valor", e.target.value)}
-                    type="number"
-                    step="0.01"
-                    placeholder="Valor (R$)"
+                  <InputValorMonetario
+                    valorReais={divisao.valor}
+                    onChange={(v) => atualizarDivisao(index, "valor", v)}
                     className="w-32 rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
                   />
                   <button
