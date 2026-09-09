@@ -17,18 +17,21 @@ export interface ContextoUsuario {
 export const exigirUsuarioComConta = cache(async function exigirUsuarioComConta(): Promise<ContextoUsuario> {
   const supabase = await criarClienteSupabaseServidor();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  // getClaims() valida o JWT localmente (chaves públicas cacheadas) em vez
+  // de bater na API de Auth a cada request — bem mais rápido que getUser(),
+  // com a mesma garantia de segurança (o RLS no Postgres continua sendo
+  // quem realmente protege os dados, usando o JWT da sessão).
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const userId = claimsData?.claims?.sub;
 
-  if (!user) {
+  if (!userId) {
     redirect("/login");
   }
 
   const { data: usuario, error } = await supabase
     .from("usuarios")
     .select("*")
-    .eq("id", user.id)
+    .eq("id", userId)
     .maybeSingle<UsuarioRow>();
 
   if (error) {
@@ -39,5 +42,5 @@ export const exigirUsuarioComConta = cache(async function exigirUsuarioComConta(
     redirect("/cadastro/conta");
   }
 
-  return { supabase, authUserId: user.id, usuario };
+  return { supabase, authUserId: userId, usuario };
 });

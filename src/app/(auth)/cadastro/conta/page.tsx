@@ -7,16 +7,15 @@ import { Campo } from "@/components/Campo";
 
 export default async function CriarContaPage() {
   const supabase = await criarClienteSupabaseServidor();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims;
 
   if (!user) redirect("/login");
 
   const { data: usuarioExistente } = await supabase
     .from("usuarios")
     .select("id")
-    .eq("id", user.id)
+    .eq("id", user.sub)
     .maybeSingle();
 
   if (usuarioExistente) redirect("/dashboard");

@@ -27,9 +27,15 @@ export async function atualizarSessao(request: NextRequest) {
     }
   );
 
+  // getClaims() verifica a assinatura do JWT localmente (com as chaves
+  // públicas do projeto, cacheadas) em vez de validar contra o servidor de
+  // Auth a cada request — mesma segurança de getUser(), bem mais rápido,
+  // e é o método recomendado pelo Supabase para isso desde a introdução
+  // de chaves de assinatura assimétricas.
   const {
-    data: { user },
-  } = await supabase.auth.getUser();
+    data: claimsData,
+  } = await supabase.auth.getClaims();
+  const user = claimsData?.claims ?? null;
 
   const { pathname } = request.nextUrl;
   const ehRotaPublica = ROTAS_PUBLICAS.some((rota) => pathname.startsWith(rota));

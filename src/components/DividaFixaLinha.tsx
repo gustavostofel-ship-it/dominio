@@ -5,6 +5,7 @@ import { atualizarDividaFixa, arquivarDividaFixa } from "@/app/actions/dividas-f
 import { FormComErro } from "@/components/FormComErro";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Campo } from "@/components/Campo";
+import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { formatarBRL } from "@/lib/calc";
 import type { DividaFixaRow } from "@/types/database";
 
@@ -21,7 +22,7 @@ export function DividaFixaLinha({ divida }: { divida: DividaFixaRow }) {
           <Campo label="Valor (R$)" name="valor" type="number" step="0.01" min="0.01" defaultValue={divida.valor_centavos / 100} required />
           <Campo label="Dia de vencimento" name="dia_vencimento" type="number" min={1} max={31} defaultValue={divida.dia_vencimento} required />
           <Campo label="Mês final (opcional)" name="mes_fim" type="month" defaultValue={divida.mes_fim?.slice(0, 7) ?? ""} />
-          <Campo label="Atribuído a" name="atribuido_a" defaultValue={divida.atribuido_a} />
+          <SeletorResponsavel valorInicial={divida.atribuido_a} />
           <label className="flex items-center gap-2 text-sm font-medium">
             <input type="checkbox" name="recorrente" defaultChecked={divida.recorrente} className="h-4 w-4 accent-verde-600" />
             Recorrente

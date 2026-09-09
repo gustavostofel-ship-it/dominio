@@ -3,9 +3,8 @@ import { criarClienteSupabaseServidor } from "@/lib/supabase/server";
 
 export default async function LandingPage() {
   const supabase = await criarClienteSupabaseServidor();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { data: claimsData } = await supabase.auth.getClaims();
+  const user = claimsData?.claims ?? null;
 
   return (
     <div className="flex-1 flex flex-col">

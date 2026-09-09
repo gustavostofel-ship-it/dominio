@@ -5,6 +5,7 @@ import { FormComErro } from "@/components/FormComErro";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Campo } from "@/components/Campo";
 import { DividaFixaLinha } from "@/components/DividaFixaLinha";
+import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { mesAtual } from "@/lib/calc";
 
 export default async function DividasFixasPage() {
@@ -36,12 +37,7 @@ export default async function DividasFixasPage() {
           <Campo label="Dia de vencimento" name="dia_vencimento" type="number" min={1} max={31} required />
           <Campo label="Mês de início" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
           <Campo label="Mês final (opcional, se tiver prazo)" name="mes_fim" type="month" />
-          <Campo
-            label='Atribuído a (deixe "eu" se for sua)'
-            name="atribuido_a"
-            defaultValue="eu"
-            placeholder="eu ou nome da pessoa"
-          />
+          <SeletorResponsavel />
           <label className="flex items-center gap-2 text-sm font-medium sm:col-span-2">
             <input type="checkbox" name="recorrente" defaultChecked className="h-4 w-4 accent-verde-600" />
             Recorrente (se desmarcar, vale só no mês de início)

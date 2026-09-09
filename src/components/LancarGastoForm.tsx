@@ -101,6 +101,7 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
               value={nomeTerceiro}
               onChange={(e) => setNomeTerceiro(e.target.value)}
               placeholder="Nome da pessoa"
+              autoComplete="off"
               className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
             />
           )}

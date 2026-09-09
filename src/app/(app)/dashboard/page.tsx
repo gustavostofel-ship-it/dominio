@@ -4,6 +4,7 @@ import { exigirUsuarioComConta } from "@/lib/data/context";
 import { carregarProjecao, statusDoResumo } from "@/lib/data/projecao";
 import { mesAtual, somarMeses, formatarBRL } from "@/lib/calc";
 import { StatusPill } from "@/components/StatusPill";
+import { StatusGauge } from "@/components/StatusGauge";
 
 const NOMES_MES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -29,6 +30,8 @@ export default async function DashboardPage({
   const mesSelecionado = mes === somarMeses(mesInicioProjecao, 1) ? mes : mesInicioProjecao;
   const resumo = dados.resumos.find((r) => r.mesReferencia === mesSelecionado) ?? dados.resumos[0];
   const status = statusDoResumo(resumo, dados.configuracoes);
+  const renda = dados.configuracoes.renda_mensal_esperada_centavos;
+  const percentualRenda = renda > 0 ? (resumo.totalDevidoCentavos / renda) * 100 : 100;
 
   const itensProprios = resumo.itens.filter((i) => i.atribuidoA === "eu");
   const itensTerceiros = resumo.itens.filter((i) => i.atribuidoA !== "eu");
@@ -67,61 +70,76 @@ export default async function DashboardPage({
         </div>
       </div>
 
-      <div className="card flex flex-wrap items-center justify-between gap-4 p-6">
-        <div>
-          <p className="text-sm text-foreground-muted">Você deve neste mês</p>
-          <p className="text-3xl font-bold text-foreground">{formatarBRL(resumo.totalDevidoCentavos)}</p>
+      <div className="card grid grid-cols-1 gap-6 p-6 lg:grid-cols-[1fr_auto] lg:items-center">
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className="text-sm text-foreground-muted">Você deve neste mês</p>
+            <StatusPill status={status} />
+          </div>
+          <p className="text-4xl font-bold tracking-tight text-foreground">
+            {formatarBRL(resumo.totalDevidoCentavos)}
+          </p>
+          <div className="flex flex-wrap gap-6 text-sm">
+            <div>
+              <p className="text-foreground-muted">Já pago no mês</p>
+              <p className="font-semibold text-verde-700">{formatarBRL(resumo.totalPagoCentavos)}</p>
+            </div>
+            {renda > 0 && (
+              <div>
+                <p className="text-foreground-muted">Renda esperada</p>
+                <p className="font-semibold">{formatarBRL(renda)}</p>
+              </div>
+            )}
+          </div>
         </div>
-        <div>
-          <p className="text-sm text-foreground-muted">Já pago no mês</p>
-          <p className="text-xl font-semibold text-verde-700">{formatarBRL(resumo.totalPagoCentavos)}</p>
-        </div>
-        <StatusPill status={status} />
+        <StatusGauge percentual={percentualRenda} status={status} rotulo="dívidas vs. renda esperada" />
       </div>
 
-      <section className="card p-6">
-        <h2 className="font-semibold">Faturas por cartão</h2>
-        {gruposPorCartao.size === 0 ? (
-          <p className="mt-3 text-sm text-foreground-muted">Nenhuma parcela de cartão neste mês.</p>
-        ) : (
-          <div className="mt-4 flex flex-col gap-3">
-            {Array.from(gruposPorCartao.entries()).map(([chave, grupo]) => {
-              const total = grupo.itens.reduce((acc, i) => acc + i.valorCentavos, 0);
-              const pendentes = grupo.itens.filter((i) => i.status === "pendente").length;
-              return (
-                <div key={chave} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-                  <div>
-                    <p className="font-medium">{grupo.nome}</p>
-                    <p className="text-xs text-foreground-muted">
-                      {grupo.itens.length} item(ns) · {pendentes} pendente(s)
-                    </p>
+      <div className="grid gap-6 lg:grid-cols-2">
+        <section className="card p-6">
+          <h2 className="font-semibold">Faturas por cartão</h2>
+          {gruposPorCartao.size === 0 ? (
+            <p className="mt-3 text-sm text-foreground-muted">Nenhuma parcela de cartão neste mês.</p>
+          ) : (
+            <div className="mt-4 flex flex-col gap-3">
+              {Array.from(gruposPorCartao.entries()).map(([chave, grupo]) => {
+                const total = grupo.itens.reduce((acc, i) => acc + i.valorCentavos, 0);
+                const pendentes = grupo.itens.filter((i) => i.status === "pendente").length;
+                return (
+                  <div key={chave} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                    <div>
+                      <p className="font-medium">{grupo.nome}</p>
+                      <p className="text-xs text-foreground-muted">
+                        {grupo.itens.length} item(ns) · {pendentes} pendente(s)
+                      </p>
+                    </div>
+                    <p className="font-semibold">{formatarBRL(total)}</p>
                   </div>
-                  <p className="font-semibold">{formatarBRL(total)}</p>
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </section>
+                );
+              })}
+            </div>
+          )}
+        </section>
 
-      <section className="card p-6">
-        <h2 className="font-semibold">Dívidas fixas</h2>
-        {dividasFixasProprias.length === 0 ? (
-          <p className="mt-3 text-sm text-foreground-muted">Nenhuma dívida fixa neste mês.</p>
-        ) : (
-          <ul className="mt-4 flex flex-col gap-2">
-            {dividasFixasProprias.map((item) => (
-              <li key={item.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
-                <span>{item.nome}</span>
-                <div className="flex items-center gap-3">
-                  <StatusItemBadge status={item.status} />
-                  <span className="font-semibold">{formatarBRL(item.valorCentavos)}</span>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+        <section className="card p-6">
+          <h2 className="font-semibold">Dívidas fixas</h2>
+          {dividasFixasProprias.length === 0 ? (
+            <p className="mt-3 text-sm text-foreground-muted">Nenhuma dívida fixa neste mês.</p>
+          ) : (
+            <ul className="mt-4 flex flex-col gap-2">
+              {dividasFixasProprias.map((item) => (
+                <li key={item.id} className="flex items-center justify-between rounded-lg border border-border px-4 py-3">
+                  <span>{item.nome}</span>
+                  <div className="flex items-center gap-3">
+                    <StatusItemBadge status={item.status} />
+                    <span className="font-semibold">{formatarBRL(item.valorCentavos)}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
 
       {itensTerceiros.length > 0 && (
         <section className="card border-dashed p-6">
