@@ -97,6 +97,23 @@ export async function atualizarDividaFixa(formData: FormData): Promise<Resultado
 }
 
 /**
+ * Migração rápida (7.1) de uma conta recorrente já existente na planilha —
+ * mesmo fluxo de criarDividaFixa, mas sem exigir nome (cai num nome
+ * genérico) e sempre marcando como recorrente e sem mês final, já que o
+ * ponto desse fluxo é justamente contas sem fim definido (assinatura,
+ * conta de luz, aluguel, dívida com pessoa).
+ */
+export async function criarDividaFixaOnboarding(formData: FormData): Promise<ResultadoAcao> {
+  const nomeInformado = String(formData.get("nome") ?? "").trim();
+  if (!nomeInformado) {
+    formData.set("nome", "Conta migrada da planilha");
+  }
+  formData.set("recorrente", "on");
+  formData.set("mes_fim", "");
+  return criarDividaFixa(formData);
+}
+
+/**
  * Encerra uma dívida fixa a partir de agora, sem apagar o histórico: define
  * mes_fim = mês atual, então este mês ainda conta normalmente (você ainda
  * deve/pagou esse último ciclo), mas a partir do mês que vem ela some

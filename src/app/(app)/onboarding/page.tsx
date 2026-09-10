@@ -20,22 +20,15 @@ export default async function OnboardingPage() {
       <div>
         <h1 className="text-2xl font-bold">Migração rápida da sua planilha</h1>
         <p className="mt-1 text-sm text-foreground-muted">
-          Cadastre aqui as dívidas que você já tem hoje, mesmo sem nome detalhado — só valor,
-          parcelas restantes e cartão. O Domínio já passa a contar isso na sua projeção. Depois
-          disso, todo lançamento novo pede um nome completo.
+          Cadastre aqui as dívidas que você já tem hoje, mesmo sem nome detalhado. Duas
+          possibilidades: uma <strong>compra parcelada</strong> (tem fim definido — precisa de
+          cartão) ou uma <strong>conta recorrente</strong> (sem fim definido, tipo assinatura,
+          aluguel ou dívida com pessoa — não precisa de cartão). O Domínio já passa a contar isso
+          na sua projeção. Depois disso, todo lançamento novo pede um nome completo.
         </p>
       </div>
 
-      {cartoes.length === 0 ? (
-        <p className="card p-6 text-sm text-foreground-muted">
-          Primeiro cadastre ao menos um cartão.{" "}
-          <Link href="/cartoes" className="font-medium text-verde-700 hover:underline">
-            Ir para Cartões →
-          </Link>
-        </p>
-      ) : (
-        <OnboardingForm cartoes={cartoes} />
-      )}
+      <OnboardingForm cartoes={cartoes} />
 
       <Link href="/dashboard" className="text-sm font-medium text-verde-700 hover:underline">
         Terminei, ir para o dashboard →
