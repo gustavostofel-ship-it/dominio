@@ -1,20 +1,24 @@
 "use client";
 
 import { useState } from "react";
-import { atualizarDividaFixa, arquivarDividaFixa } from "@/app/actions/dividas-fixas";
+import { atualizarDividaFixa, arquivarDividaFixa, encerrarDividaFixaAgora } from "@/app/actions/dividas-fixas";
 import { FormComErro } from "@/components/FormComErro";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Campo } from "@/components/Campo";
 import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { CategoriaPill, SeletorCategoria } from "@/components/CategoriaGasto";
-import { formatarBRL } from "@/lib/calc";
+import { formatarBRL, mesAtual } from "@/lib/calc";
 import type { CartaoRow, DividaFixaRow } from "@/types/database";
 
 export function DividaFixaLinha({ divida, cartoes }: { divida: DividaFixaRow; cartoes: CartaoRow[] }) {
   const [editando, setEditando] = useState(false);
+  const [confirmandoEncerrar, setConfirmandoEncerrar] = useState(false);
   const ehDeTerceiro = divida.atribuido_a !== "eu";
   const cartao = cartoes.find((c) => c.id === divida.cartao_id);
+  const mesFimRef = divida.mes_fim?.slice(0, 7) ?? null;
+  const jaEncerrada = mesFimRef !== null && mesFimRef < mesAtual();
+  const podeEncerrar = divida.ativo && divida.recorrente && (!mesFimRef || mesFimRef > mesAtual());
 
   if (editando) {
     return (
@@ -72,6 +76,7 @@ export function DividaFixaLinha({ divida, cartoes }: { divida: DividaFixaRow; ca
         <p className="text-xs text-foreground-muted">
           Vence dia {divida.dia_vencimento} · {divida.recorrente ? "recorrente" : "única"}
           {cartao && <> · cobrada no {cartao.nome}</>}
+          {mesFimRef && <> · {jaEncerrada ? "encerrada em" : "encerra em"} {mesFimRef}</>}
         </p>
       </div>
       <div className="flex items-center gap-3">
@@ -79,6 +84,35 @@ export function DividaFixaLinha({ divida, cartoes }: { divida: DividaFixaRow; ca
         <button onClick={() => setEditando(true)} className="text-sm font-medium text-verde-700 hover:underline">
           Editar
         </button>
+        {podeEncerrar &&
+          (confirmandoEncerrar ? (
+            <form
+              action={async (formData) => {
+                await encerrarDividaFixaAgora(formData);
+              }}
+              className="flex items-center gap-1"
+            >
+              <input type="hidden" name="id" value={divida.id} />
+              <span className="text-xs text-foreground-muted">Conta até {mesAtual()}, some depois. Confirma?</span>
+              <button type="submit" className="text-sm font-medium text-verde-700 hover:underline">
+                Sim
+              </button>
+              <button
+                type="button"
+                onClick={() => setConfirmandoEncerrar(false)}
+                className="text-sm font-medium text-foreground-muted hover:underline"
+              >
+                Não
+              </button>
+            </form>
+          ) : (
+            <button
+              onClick={() => setConfirmandoEncerrar(true)}
+              className="text-sm font-medium text-verde-700 hover:underline"
+            >
+              Encerrar agora
+            </button>
+          ))}
         {divida.ativo && (
           <form
             action={async (formData) => {
