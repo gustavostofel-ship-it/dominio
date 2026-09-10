@@ -23,7 +23,7 @@ export async function criarDividaFixa(formData: FormData): Promise<ResultadoAcao
   const categoria = String(formData.get("categoria") ?? "fixa");
 
   if (!nome) return { erro: "Informe o nome da dívida." };
-  if (!["fixa", "assinatura", "divida_pessoa"].includes(categoria)) return { erro: "Categoria inválida." };
+  if (!["fixa", "assinatura", "divida_pessoa", "lazer", "outros"].includes(categoria)) return { erro: "Categoria inválida." };
   if (!Number.isFinite(valor) || valor <= 0) return { erro: "Valor inválido." };
   if (!Number.isInteger(diaVencimento) || diaVencimento < 1 || diaVencimento > 31) {
     return { erro: "Dia de vencimento inválido." };
@@ -68,7 +68,7 @@ export async function atualizarDividaFixa(formData: FormData): Promise<Resultado
   const categoria = String(formData.get("categoria") ?? "fixa");
 
   if (!id || !nome) return { erro: "Dados inválidos." };
-  if (!["fixa", "assinatura", "divida_pessoa"].includes(categoria)) return { erro: "Categoria inválida." };
+  if (!["fixa", "assinatura", "divida_pessoa", "lazer", "outros"].includes(categoria)) return { erro: "Categoria inválida." };
 
   const { error } = await supabase
     .from("dividas_fixas")

@@ -7,7 +7,7 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Campo } from "@/components/Campo";
 import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
-import { CategoriaPill, SeletorCategoriaDividaFixa } from "@/components/CategoriaDividaFixa";
+import { CategoriaPill, SeletorCategoria } from "@/components/CategoriaGasto";
 import { formatarBRL } from "@/lib/calc";
 import type { CartaoRow, DividaFixaRow } from "@/types/database";
 
@@ -41,7 +41,7 @@ export function DividaFixaLinha({ divida, cartoes }: { divida: DividaFixaRow; ca
             </select>
           </label>
           <SeletorResponsavel valorInicial={divida.atribuido_a} />
-          <SeletorCategoriaDividaFixa defaultValue={divida.categoria} />
+          <SeletorCategoria defaultValue={divida.categoria} />
           <label className="flex items-center gap-2 text-sm font-medium">
             <input type="checkbox" name="recorrente" defaultChecked={divida.recorrente} className="h-4 w-4 accent-verde-600" />
             Recorrente

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import clsx from "clsx";
 import { exigirUsuarioComConta } from "@/lib/data/context";
-import { carregarProjecao, statusDoResumo } from "@/lib/data/projecao";
+import { carregarProjecao, calcularGastosPorCategoria, statusDoResumo } from "@/lib/data/projecao";
 import { mesAtual, somarMeses, formatarBRL } from "@/lib/calc";
 import { StatusPill } from "@/components/StatusPill";
 import { StatusGauge } from "@/components/StatusGauge";
-import { CategoriaPill } from "@/components/CategoriaDividaFixa";
+import { CategoriaPill } from "@/components/CategoriaGasto";
+import { GraficoCategorias } from "@/components/GraficoCategorias";
 
 const NOMES_MES = [
   "janeiro", "fevereiro", "março", "abril", "maio", "junho",
@@ -64,6 +65,8 @@ export default async function DashboardPage({
     gruposPorCartao.get(cartaoId)!.itens.push(item);
   }
 
+  const gastosPorCategoria = calcularGastosPorCategoria(dados, mesSelecionado);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
@@ -107,6 +110,17 @@ export default async function DashboardPage({
         </div>
         <StatusGauge percentual={percentualRenda} status={status} rotulo="dívidas vs. renda esperada" />
       </div>
+
+      <section className="card p-6">
+        <h2 className="font-semibold">Onde seu dinheiro está indo</h2>
+        <p className="mt-1 text-sm text-foreground-muted">
+          Tudo que é seu neste mês (pago ou pendente), por categoria — pra saber se é hora de
+          cortar alguma assinatura ou gasto de lazer.
+        </p>
+        <div className="mt-4">
+          <GraficoCategorias totais={gastosPorCategoria} />
+        </div>
+      </section>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="card p-6">

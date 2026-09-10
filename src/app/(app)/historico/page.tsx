@@ -6,6 +6,7 @@ interface FiltrosHistorico {
   q?: string;
   atribuido?: "todos" | "eu" | "terceiros";
   status?: "todos" | "pendente" | "pago";
+  ordenar?: "data_desc" | "data_asc" | "lancamento_desc";
 }
 
 export default async function HistoricoPage({
@@ -16,11 +17,18 @@ export default async function HistoricoPage({
   const filtros = await searchParams;
   const { supabase, usuario } = await exigirUsuarioComConta();
 
-  let query = supabase
-    .from("compras")
-    .select("*")
-    .eq("conta_id", usuario.conta_id)
-    .order("criado_em", { ascending: false });
+  const ordenar = filtros.ordenar ?? "data_desc";
+  let query = supabase.from("compras").select("*").eq("conta_id", usuario.conta_id);
+  if (ordenar === "lancamento_desc") {
+    query = query.order("criado_em", { ascending: false });
+  } else {
+    // Ordena pela data da própria compra (mes_inicio), não por quando foi
+    // digitada no sistema — importante ao migrar dívidas antigas, onde
+    // tudo é "lançado hoje" mas as datas reais são bem diferentes.
+    query = query
+      .order("mes_inicio", { ascending: ordenar === "data_asc" })
+      .order("criado_em", { ascending: false });
+  }
 
   if (filtros.q) query = query.ilike("descricao", `%${filtros.q}%`);
   if (filtros.atribuido === "eu") query = query.eq("atribuido_a", "eu");
@@ -84,6 +92,11 @@ export default async function HistoricoPage({
           <option value="todos">Qualquer status</option>
           <option value="pendente">Com parcela pendente</option>
           <option value="pago">Totalmente pago</option>
+        </select>
+        <select name="ordenar" defaultValue={ordenar} className="rounded-lg border border-border px-3 py-2 text-sm">
+          <option value="data_desc">Data da compra (mais recente primeiro)</option>
+          <option value="data_asc">Data da compra (mais antiga primeiro)</option>
+          <option value="lancamento_desc">Ordem que foi lançado no sistema</option>
         </select>
         <button type="submit" className="rounded-lg bg-verde-600 px-4 py-2 text-sm font-semibold text-white hover:bg-verde-700">
           Filtrar

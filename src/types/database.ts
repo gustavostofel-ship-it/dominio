@@ -7,12 +7,14 @@ export type Papel = "owner" | "membro";
 export type StatusItem = "pendente" | "pago_no_mes" | "quitado_antecipado";
 export type StatusDivisao = "a_cobrar" | "recebido";
 /**
- * Classificação de uma dívida fixa, pra dar pra distinguir o que é
- * essencial (fixa) do que é cortável (assinatura) e do que é dinheiro
- * devido a uma pessoa específica (divida_pessoa) — não um compromisso
- * tipo aluguel.
+ * Classificação de um gasto ou dívida fixa — usada nos dois pra dar pra
+ * somar tudo junto num relatório único de "onde estou gastando mais":
+ * "fixa" (essencial, não dá pra cortar), "assinatura" (recorrente,
+ * cortável se precisar), "divida_pessoa" (dinheiro devido a uma pessoa
+ * específica, não um compromisso tipo aluguel), "lazer" (discricionário)
+ * ou "outros" (padrão de compras avulsas do dia a dia).
  */
-export type CategoriaDividaFixa = "fixa" | "assinatura" | "divida_pessoa";
+export type CategoriaGasto = "fixa" | "assinatura" | "divida_pessoa" | "lazer" | "outros";
 
 export interface ContaRow {
   id: string;
@@ -54,7 +56,7 @@ export interface DividaFixaRow {
   atribuido_a: string;
   /** Cartão em que essa dívida fixa é cobrada, se houver (ex.: assinatura no cartão). */
   cartao_id: string | null;
-  categoria: CategoriaDividaFixa;
+  categoria: CategoriaGasto;
   ativo: boolean;
   criado_por: string | null;
   criado_em: string;
@@ -71,6 +73,7 @@ export interface CompraRow {
   numero_parcelas: number;
   mes_inicio: string;
   atribuido_a: string;
+  categoria: CategoriaGasto;
   criado_por: string | null;
   criado_em: string;
   editado_por: string | null;

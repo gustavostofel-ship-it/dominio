@@ -54,7 +54,7 @@ export function NavBar({ nomeUsuario, papel }: { nomeUsuario: string; papel: str
     <>
       {/* Topbar mobile — o botão fica do MESMO lado de onde a gaveta abre (esquerda),
           senão a animação parece não ter relação com o botão que a acionou. */}
-      <header className="relative flex items-center border-b border-border bg-surface px-4 py-3 md:hidden">
+      <header className="sticky top-0 z-30 flex items-center border-b border-border bg-surface px-4 py-3 md:hidden">
         <button
           onClick={() => setAberto(true)}
           aria-label="Abrir menu"
@@ -84,7 +84,7 @@ export function NavBar({ nomeUsuario, papel }: { nomeUsuario: string; papel: str
       <aside
         className={clsx(
           "fixed inset-y-0 left-0 z-50 flex w-72 shrink-0 flex-col bg-surface transition-transform duration-200 ease-out",
-          "md:static md:inset-auto md:z-auto md:h-screen md:w-64 md:translate-x-0 md:border-r md:border-border md:shadow-none",
+          "md:sticky md:top-0 md:z-auto md:h-screen md:w-64 md:translate-x-0 md:border-r md:border-border md:shadow-none",
           aberto ? "translate-x-0 shadow-2xl" : "-translate-x-full"
         )}
       >

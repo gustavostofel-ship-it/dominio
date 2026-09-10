@@ -14,6 +14,8 @@ import {
 import type { ContextoUsuario } from "./context";
 import type {
   CartaoRow,
+  CategoriaGasto,
+  CompraRow,
   ConfiguracoesRow,
   DividaFixaRow,
   DividaFixaStatusRow,
@@ -28,6 +30,7 @@ export interface DadosProjecao {
   dividasFixasPorId: Map<string, DividaFixaRow>;
   nomesParcelas: Map<string, string>; // parcela.id -> descrição da compra
   parcelaCartaoId: Map<string, string>; // parcela.id -> cartao_id
+  parcelaCategoria: Map<string, CategoriaGasto>; // parcela.id -> categoria da compra
 }
 
 /**
@@ -65,7 +68,7 @@ export async function carregarProjecao(
   ]);
 
   const cartoes = (cartoesRes.data ?? []) as CartaoRow[];
-  const compras = comprasRes.data ?? [];
+  const compras = (comprasRes.data ?? []) as CompraRow[];
   const parcelas = (parcelasRes.data ?? []) as ParcelaRow[];
   const dividasFixas = (dividasRes.data ?? []) as DividaFixaRow[];
   const statusOverrides = (statusRes.data ?? []) as DividaFixaStatusRow[];
@@ -83,11 +86,15 @@ export async function carregarProjecao(
   const dividasFixasPorId = new Map(dividasFixas.map((d) => [d.id, d]));
   const nomesParcelas = new Map<string, string>();
   const parcelaCartaoId = new Map<string, string>();
+  const parcelaCategoria = new Map<string, CategoriaGasto>();
 
   const itensParcelas: ItemProjecao[] = parcelas.map((p) => {
     const compra = comprasPorId.get(p.compra_id);
     nomesParcelas.set(p.id, compra?.descricao ?? "(compra removida)");
-    if (compra) parcelaCartaoId.set(p.id, compra.cartao_id);
+    if (compra) {
+      parcelaCartaoId.set(p.id, compra.cartao_id);
+      parcelaCategoria.set(p.id, compra.categoria);
+    }
     return {
       origem: "parcela",
       id: p.id,
@@ -132,7 +139,40 @@ export async function carregarProjecao(
 
   const resumos = calcularResumoPorMes([...itensParcelas, ...itensDividasFixas], meses);
 
-  return { meses, resumos, configuracoes, cartoesPorId, dividasFixasPorId, nomesParcelas, parcelaCartaoId };
+  return {
+    meses,
+    resumos,
+    configuracoes,
+    cartoesPorId,
+    dividasFixasPorId,
+    nomesParcelas,
+    parcelaCartaoId,
+    parcelaCategoria,
+  };
+}
+
+/**
+ * Soma, por categoria, tudo que é "seu" (exclui itens de terceiros) num
+ * mês — independente de já ter sido pago ou não, porque a pergunta aqui é
+ * "pra onde meu dinheiro está indo", não "quanto ainda falta pagar".
+ */
+export function calcularGastosPorCategoria(dados: DadosProjecao, mes: MesRef): Map<CategoriaGasto, number> {
+  const resumo = dados.resumos.find((r) => r.mesReferencia === mes);
+  const totais = new Map<CategoriaGasto, number>();
+  if (!resumo) return totais;
+
+  for (const item of resumo.itens) {
+    if (item.atribuidoA !== "eu") continue;
+
+    const categoria: CategoriaGasto =
+      item.origem === "parcela"
+        ? (dados.parcelaCategoria.get(item.id) ?? "outros")
+        : (dados.dividasFixasPorId.get(item.id.split("|")[0])?.categoria ?? "fixa");
+
+    totais.set(categoria, (totais.get(categoria) ?? 0) + item.valorCentavos);
+  }
+
+  return totais;
 }
 
 export function statusDoResumo(resumo: ResumoMes, config: ConfiguracoesRow): StatusFinanceiro {

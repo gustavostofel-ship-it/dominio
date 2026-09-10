@@ -7,6 +7,8 @@ import { Campo } from "@/components/Campo";
 import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { InputValorMonetario } from "@/components/InputValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
+import { SeletorModoValor, type ModoValor } from "@/components/SeletorModoValor";
+import { SeletorCategoria } from "@/components/CategoriaGasto";
 import { mesAtual } from "@/lib/calc";
 import type { CartaoRow } from "@/types/database";
 
@@ -17,6 +19,7 @@ interface Divisao {
 
 export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
   const router = useRouter();
+  const [modoValor, setModoValor] = useState<ModoValor>("total");
   const [responsavel, setResponsavel] = useState("eu");
   const [divisoes, setDivisoes] = useState<Divisao[]>([]);
   const [erro, setErro] = useState<string | null>(null);
@@ -70,10 +73,17 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
       </label>
 
       <div className="grid gap-4 sm:grid-cols-2">
-        <CampoValorMonetario label="Valor total" name="valor" required />
+        <SeletorModoValor modo={modoValor} onMudar={setModoValor} />
+        <CampoValorMonetario
+          key={modoValor}
+          label={modoValor === "total" ? "Valor total" : "Valor de cada parcela"}
+          name="valor"
+          required
+        />
         <Campo label="Número de parcelas" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
         <Campo label="Mês de início" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
         <Campo label="Descrição" name="descricao" placeholder="Ex.: Shopee (casamento)" required className="sm:col-span-2" />
+        <SeletorCategoria />
       </div>
 
       <SeletorResponsavel rotulo="De quem é esse gasto?" aoMudar={setResponsavel} />

@@ -7,6 +7,8 @@ import { SubmitButton } from "@/components/SubmitButton";
 import { Campo } from "@/components/Campo";
 import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
+import { SeletorModoValor, type ModoValor } from "@/components/SeletorModoValor";
+import { CategoriaPill, SeletorCategoria } from "@/components/CategoriaGasto";
 import { formatarBRL } from "@/lib/calc";
 import type { CartaoRow, CompraRow, ParcelaRow } from "@/types/database";
 
@@ -23,13 +25,25 @@ export function CompraCard({
 }) {
   const [editando, setEditando] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
+  const [modoValor, setModoValor] = useState<ModoValor>("total");
   const ehTerceiro = compra.atribuido_a !== "eu";
   const ps = [...parcelas].sort((a, b) => a.numero_da_parcela - b.numero_da_parcela);
+  const cartao = cartoes.find((c) => c.id === compra.cartao_id);
+  const dataLancamento = new Date(compra.criado_em);
+  const dataFormatada = dataLancamento.toLocaleDateString("pt-BR");
+  const horaFormatada = dataLancamento.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 
   if (editando) {
     return (
       <div className="card p-5">
-        <FormComErro action={atualizarCompra} onSucesso={() => setEditando(false)} className="grid gap-3 sm:grid-cols-2">
+        <FormComErro
+          action={atualizarCompra}
+          onSucesso={() => {
+            setEditando(false);
+            setModoValor("total");
+          }}
+          className="grid gap-3 sm:grid-cols-2"
+        >
           <input type="hidden" name="id" value={compra.id} />
           <label className="flex flex-col gap-1 text-sm font-medium">
             Cartão
@@ -47,10 +61,12 @@ export function CompraCard({
             </select>
           </label>
           <Campo label="Descrição" name="descricao" defaultValue={compra.descricao} required />
+          <SeletorModoValor modo={modoValor} onMudar={setModoValor} />
           <CampoValorMonetario
-            label="Valor total"
+            key={modoValor}
+            label={modoValor === "total" ? "Valor total" : "Valor de cada parcela"}
             name="valor"
-            defaultValueReais={compra.valor_total_centavos / 100}
+            defaultValueReais={modoValor === "total" ? compra.valor_total_centavos / 100 : undefined}
             required
           />
           <Campo
@@ -69,6 +85,7 @@ export function CompraCard({
             required
           />
           <SeletorResponsavel valorInicial={compra.atribuido_a} />
+          <SeletorCategoria defaultValue={compra.categoria} />
           <p className="text-xs text-foreground-muted sm:col-span-2">
             Atenção: editar recalcula todas as parcelas do zero — qualquer parcela já marcada como
             paga ou quitada antecipadamente volta para pendente.
@@ -77,7 +94,10 @@ export function CompraCard({
             <SubmitButton>Salvar</SubmitButton>
             <button
               type="button"
-              onClick={() => setEditando(false)}
+              onClick={() => {
+                setEditando(false);
+                setModoValor("total");
+              }}
               className="rounded-lg border border-border px-4 py-2 text-sm font-medium hover:bg-surface-muted"
             >
               Cancelar
@@ -92,13 +112,14 @@ export function CompraCard({
     <div className="card p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="font-semibold">
+          <p className="flex flex-wrap items-center gap-2 font-semibold">
             {compra.descricao}
-            {ehTerceiro && <span className="ml-2 status-pill status-pill--amarelo">de {compra.atribuido_a}</span>}
+            <CategoriaPill categoria={compra.categoria} />
+            {ehTerceiro && <span className="status-pill status-pill--amarelo">de {compra.atribuido_a}</span>}
           </p>
           <p className="text-xs text-foreground-muted">
-            Lançado por {nomeCriador} em {new Date(compra.criado_em).toLocaleDateString("pt-BR")} ·{" "}
-            {compra.numero_parcelas}x
+            {cartao?.nome ?? "cartão removido"} · {compra.numero_parcelas}x · lançado por {nomeCriador} em{" "}
+            {dataFormatada} às {horaFormatada}
           </p>
         </div>
         <div className="flex items-center gap-3">

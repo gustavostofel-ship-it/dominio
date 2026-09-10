@@ -1,13 +1,13 @@
 import { exigirUsuarioComConta } from "@/lib/data/context";
 import { criarDividaFixa } from "@/app/actions/dividas-fixas";
-import type { CartaoRow, CategoriaDividaFixa, DividaFixaRow } from "@/types/database";
+import type { CartaoRow, CategoriaGasto, DividaFixaRow } from "@/types/database";
 import { FormComErro } from "@/components/FormComErro";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Campo } from "@/components/Campo";
 import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { DividaFixaLinha } from "@/components/DividaFixaLinha";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
-import { CategoriaPill, ROTULOS_CATEGORIA, SeletorCategoriaDividaFixa } from "@/components/CategoriaDividaFixa";
+import { CategoriaPill, ROTULOS_CATEGORIA, SeletorCategoria, ordemCategorias } from "@/components/CategoriaGasto";
 import { formatarBRL, mesAtual } from "@/lib/calc";
 
 export default async function DividasFixasPage() {
@@ -31,8 +31,8 @@ export default async function DividasFixasPage() {
   const cartoes = (cartoesData ?? []) as CartaoRow[];
 
   const dividasAtivas = dividas.filter((d) => d.ativo);
-  const categorias: CategoriaDividaFixa[] = ["fixa", "assinatura", "divida_pessoa"];
-  const totalPorCategoria = new Map<CategoriaDividaFixa, number>(
+  const categorias: CategoriaGasto[] = ordemCategorias();
+  const totalPorCategoria = new Map<CategoriaGasto, number>(
     categorias.map((c) => [c, dividasAtivas.filter((d) => d.categoria === c).reduce((acc, d) => acc + d.valor_centavos, 0)])
   );
 
@@ -70,7 +70,7 @@ export default async function DividasFixasPage() {
             </select>
           </label>
           <SeletorResponsavel />
-          <SeletorCategoriaDividaFixa />
+          <SeletorCategoria defaultValue="fixa" />
           <label className="flex items-center gap-2 text-sm font-medium sm:col-span-2">
             <input type="checkbox" name="recorrente" defaultChecked className="h-4 w-4 accent-verde-600" />
             Recorrente (se desmarcar, vale só no mês de início)
@@ -86,16 +86,18 @@ export default async function DividasFixasPage() {
             Pra saber, se precisar apertar o orçamento, o que dá pra cortar (assinatura) e o que
             não dá (fixa essencial) — e separar o que é dívida com uma pessoa.
           </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-3">
-            {categorias.map((categoria) => (
-              <div key={categoria} className="rounded-lg border border-border p-4">
-                <CategoriaPill categoria={categoria} />
-                <p className="mt-2 text-xl font-bold">{formatarBRL(totalPorCategoria.get(categoria) ?? 0)}</p>
-                <p className="text-xs text-foreground-muted">
-                  {dividasAtivas.filter((d) => d.categoria === categoria).length} item(ns) por mês
-                </p>
-              </div>
-            ))}
+          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {categorias
+              .filter((categoria) => dividasAtivas.some((d) => d.categoria === categoria))
+              .map((categoria) => (
+                <div key={categoria} className="rounded-lg border border-border p-4">
+                  <CategoriaPill categoria={categoria} />
+                  <p className="mt-2 text-xl font-bold">{formatarBRL(totalPorCategoria.get(categoria) ?? 0)}</p>
+                  <p className="text-xs text-foreground-muted">
+                    {dividasAtivas.filter((d) => d.categoria === categoria).length} item(ns) por mês
+                  </p>
+                </div>
+              ))}
           </div>
         </section>
       )}

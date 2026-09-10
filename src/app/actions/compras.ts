@@ -17,17 +17,27 @@ async function inserirCompraComParcelas(params: {
   numeroParcelas: number;
   mesInicio: string;
   atribuidoA: string;
+  modoValor: string;
+  categoria: string;
   divisoes: DivisaoInput[];
 }): Promise<ResultadoAcao> {
   const { supabase, usuario } = await exigirUsuarioComConta();
-  const { cartaoId, descricao, valor, numeroParcelas, mesInicio, atribuidoA, divisoes } = params;
+  const { cartaoId, descricao, valor, numeroParcelas, mesInicio, atribuidoA, modoValor, categoria, divisoes } = params;
 
   if (!cartaoId) return { erro: "Selecione um cartão." };
   if (!Number.isFinite(valor) || valor <= 0) return { erro: "Valor inválido." };
   if (!Number.isInteger(numeroParcelas) || numeroParcelas < 1) return { erro: "Número de parcelas inválido." };
   if (!mesInicio) return { erro: "Informe o mês de início." };
+  if (!["fixa", "assinatura", "divida_pessoa", "lazer", "outros"].includes(categoria)) {
+    return { erro: "Categoria inválida." };
+  }
 
-  const valorTotalCentavos = reaisParaCentavos(valor);
+  // "parcela": o valor informado é de CADA parcela (ex.: "4x de R$ 50") — o
+  // sistema multiplica em centavos (exato, sem risco de arredondamento) pra
+  // achar o total. "total" (padrão): o valor já é o total, dividido pelas
+  // parcelas na hora de gerar cada uma (ver gerarParcelas).
+  const valorInformadoCentavos = reaisParaCentavos(valor);
+  const valorTotalCentavos = modoValor === "parcela" ? valorInformadoCentavos * numeroParcelas : valorInformadoCentavos;
 
   const { data: compra, error: erroCompra } = await supabase
     .from("compras")
@@ -39,6 +49,7 @@ async function inserirCompraComParcelas(params: {
       numero_parcelas: numeroParcelas,
       mes_inicio: `${mesInicio}-01`,
       atribuido_a: atribuidoA,
+      categoria,
       criado_por: usuario.id,
     })
     .select("id")
@@ -108,6 +119,8 @@ export async function criarCompra(formData: FormData): Promise<ResultadoAcao> {
     numeroParcelas: Number(formData.get("numero_parcelas") || 1),
     mesInicio: String(formData.get("mes_inicio") ?? mesAtual()),
     atribuidoA: String(formData.get("atribuido_a") ?? "eu").trim() || "eu",
+    modoValor: String(formData.get("modo_valor") ?? "total"),
+    categoria: String(formData.get("categoria") ?? "outros"),
     divisoes,
   });
 }
@@ -136,6 +149,8 @@ export async function criarCompraOnboarding(formData: FormData): Promise<Resulta
     numeroParcelas: Number(formData.get("numero_parcelas") || 1),
     mesInicio: String(formData.get("mes_inicio") ?? mesAtual()),
     atribuidoA: String(formData.get("atribuido_a") ?? "eu").trim() || "eu",
+    modoValor: String(formData.get("modo_valor") ?? "total"),
+    categoria: String(formData.get("categoria") ?? "outros"),
     divisoes,
   });
 }
@@ -170,6 +185,8 @@ export async function atualizarCompra(formData: FormData): Promise<ResultadoAcao
   const numeroParcelas = Number(formData.get("numero_parcelas") || 1);
   const mesInicio = String(formData.get("mes_inicio") ?? "");
   const atribuidoA = String(formData.get("atribuido_a") ?? "eu").trim() || "eu";
+  const modoValor = String(formData.get("modo_valor") ?? "total");
+  const categoria = String(formData.get("categoria") ?? "outros");
 
   if (!compraId) return { erro: "Compra inválida." };
   if (!cartaoId) return { erro: "Selecione um cartão." };
@@ -177,8 +194,12 @@ export async function atualizarCompra(formData: FormData): Promise<ResultadoAcao
   if (!Number.isFinite(valor) || valor <= 0) return { erro: "Valor inválido." };
   if (!Number.isInteger(numeroParcelas) || numeroParcelas < 1) return { erro: "Número de parcelas inválido." };
   if (!mesInicio) return { erro: "Informe o mês de início." };
+  if (!["fixa", "assinatura", "divida_pessoa", "lazer", "outros"].includes(categoria)) {
+    return { erro: "Categoria inválida." };
+  }
 
-  const valorTotalCentavos = reaisParaCentavos(valor);
+  const valorInformadoCentavos = reaisParaCentavos(valor);
+  const valorTotalCentavos = modoValor === "parcela" ? valorInformadoCentavos * numeroParcelas : valorInformadoCentavos;
 
   const { error: erroUpdate } = await supabase
     .from("compras")
@@ -189,6 +210,7 @@ export async function atualizarCompra(formData: FormData): Promise<ResultadoAcao
       numero_parcelas: numeroParcelas,
       mes_inicio: `${mesInicio}-01`,
       atribuido_a: atribuidoA,
+      categoria,
       editado_por: usuario.id,
       editado_em: new Date().toISOString(),
     })

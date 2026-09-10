@@ -6,6 +6,8 @@ import { Campo } from "@/components/Campo";
 import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { InputValorMonetario } from "@/components/InputValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
+import { SeletorModoValor, type ModoValor } from "@/components/SeletorModoValor";
+import { SeletorCategoria } from "@/components/CategoriaGasto";
 import { mesAtual } from "@/lib/calc";
 import type { CartaoRow } from "@/types/database";
 
@@ -25,6 +27,7 @@ export function OnboardingForm({ cartoes }: { cartoes: CartaoRow[] }) {
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
   const [responsavel, setResponsavel] = useState("eu");
+  const [modoValor, setModoValor] = useState<ModoValor>("total");
   const [divisoes, setDivisoes] = useState<Divisao[]>([]);
   // Muda a cada envio bem-sucedido só pra forçar o SeletorResponsavel a
   // remontar do zero (senão "Outro" + o nome digitado ficariam presos
@@ -65,12 +68,16 @@ export function OnboardingForm({ cartoes }: { cartoes: CartaoRow[] }) {
       return;
     }
 
+    const parcelas = Number(formData.get("numero_parcelas") || 1);
+    const valorInformado = Number(formData.get("valor"));
+    const valorTotal = modoValor === "parcela" ? valorInformado * parcelas : valorInformado;
+
     setLancadas((atual) => [
       ...atual,
       {
         cartao: cartaoNome,
-        valor: String(formData.get("valor")),
-        parcelas: String(formData.get("numero_parcelas")),
+        valor: valorTotal.toFixed(2),
+        parcelas: String(parcelas),
       },
     ]);
     setDivisoes([]);
@@ -95,7 +102,13 @@ export function OnboardingForm({ cartoes }: { cartoes: CartaoRow[] }) {
             ))}
           </select>
         </label>
-        <CampoValorMonetario label="Valor total restante" name="valor" required />
+        <SeletorModoValor modo={modoValor} onMudar={setModoValor} />
+        <CampoValorMonetario
+          key={modoValor}
+          label={modoValor === "total" ? "Valor total restante" : "Valor de cada parcela"}
+          name="valor"
+          required
+        />
         <Campo label="Parcelas restantes" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
         <Campo
           label="Mês da próxima parcela a pagar"
@@ -110,6 +123,7 @@ export function OnboardingForm({ cartoes }: { cartoes: CartaoRow[] }) {
           placeholder='Deixe em branco para "Dívida migrada da planilha"'
           className="sm:col-span-2"
         />
+        <SeletorCategoria />
 
         <SeletorResponsavel key={resetKey} rotulo="De quem é essa dívida?" aoMudar={setResponsavel} />
 
