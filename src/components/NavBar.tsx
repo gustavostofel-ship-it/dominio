@@ -30,7 +30,7 @@ const ITENS = [
   { href: "/gastos/novo", label: "Lançar gasto", Icon: IconPlus },
   { href: "/onboarding", label: "Importar dívidas existentes", Icon: IconImport },
   { href: "/cartoes", label: "Cartões", Icon: IconCard },
-  { href: "/dividas-fixas", label: "Dívidas fixas", Icon: IconHome },
+  { href: "/dividas-fixas", label: "Assinaturas e dívidas", Icon: IconHome },
   { href: "/historico", label: "Histórico", Icon: IconClock },
   { href: "/a-receber", label: "A receber", Icon: IconReceive },
   { href: "/usuarios", label: "Usuários", Icon: IconUsers },

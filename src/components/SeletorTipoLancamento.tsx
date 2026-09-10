@@ -1,22 +1,31 @@
 "use client";
 
-export type TipoMigracao = "parcelada" | "recorrente";
+export type TipoLancamento = "parcelada" | "recorrente";
 
 /**
- * Na migração rápida, a dívida existente pode ser de dois tipos bem
- * diferentes — e cada um tem um jeito diferente de "acabar":
+ * Todo gasto novo (seja lançado no dia a dia ou migrado da planilha) é de
+ * um de dois tipos bem diferentes — e cada um tem um jeito diferente de
+ * "acabar":
  *
- * - "parcelada": tem fim definido, um número fixo de parcelas restantes
- *   (ex.: geladeira em 8x, empréstimo em 12x). Vira uma compra no cartão.
+ * - "parcelada": tem fim definido, um número fixo de parcelas (ex.:
+ *   geladeira em 8x, empréstimo em 12x, compra do dia a dia à vista/1x).
+ *   Vira uma compra no cartão.
  * - "recorrente": não tem fim definido, continua cobrando todo mês até
- *   você decidir cancelar (ex.: Netflix, internet, conta de luz, aluguel,
- *   uma dívida com uma pessoa que ainda não sabe quando acaba). Vira uma
- *   dívida fixa, sem "número de parcelas".
+ *   você decidir cancelar (ex.: assinatura tipo Netflix, internet, conta
+ *   de luz, aluguel, uma dívida com uma pessoa que ainda não sabe quando
+ *   acaba). Vira uma dívida fixa, sem "número de parcelas" — e já nasce
+ *   pronta pra usar o "Encerrar" quando você cancelar.
  */
-export function SeletorTipoMigracao({ tipo, onMudar }: { tipo: TipoMigracao; onMudar: (tipo: TipoMigracao) => void }) {
+export function SeletorTipoLancamento({
+  tipo,
+  onMudar,
+}: {
+  tipo: TipoLancamento;
+  onMudar: (tipo: TipoLancamento) => void;
+}) {
   return (
     <div className="flex flex-col gap-2 sm:col-span-2">
-      <span className="text-sm font-medium">O que você está cadastrando?</span>
+      <span className="text-sm font-medium">Que tipo de gasto é esse?</span>
       <div className="grid gap-2 sm:grid-cols-2">
         <label
           className={`flex cursor-pointer flex-col gap-0.5 rounded-lg border px-4 py-3 text-sm ${
@@ -30,9 +39,11 @@ export function SeletorTipoMigracao({ tipo, onMudar }: { tipo: TipoMigracao; onM
               onChange={() => onMudar("parcelada")}
               className="h-4 w-4 accent-verde-600"
             />
-            Compra parcelada
+            Compra no cartão
           </span>
-          <span className="text-foreground-muted">Tem fim definido — ex.: geladeira em 8x, empréstimo em 12x.</span>
+          <span className="text-foreground-muted">
+            Tem fim definido — geladeira em 8x, empréstimo em 12x, ou até uma compra à vista (1x).
+          </span>
         </label>
         <label
           className={`flex cursor-pointer flex-col gap-0.5 rounded-lg border px-4 py-3 text-sm ${
@@ -46,11 +57,11 @@ export function SeletorTipoMigracao({ tipo, onMudar }: { tipo: TipoMigracao; onM
               onChange={() => onMudar("recorrente")}
               className="h-4 w-4 accent-verde-600"
             />
-            Conta recorrente
+            Assinatura / dívida fixa
           </span>
           <span className="text-foreground-muted">
-            Sem fim definido, continua até você cancelar — ex.: Netflix, internet, aluguel, dívida
-            com uma pessoa.
+            Sem fim definido, continua até você cancelar — assinatura, aluguel, conta de luz,
+            dívida com uma pessoa.
           </span>
         </label>
       </div>

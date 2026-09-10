@@ -1,14 +1,15 @@
+import Link from "next/link";
 import { exigirUsuarioComConta } from "@/lib/data/context";
 import { criarDividaFixa } from "@/app/actions/dividas-fixas";
-import type { CartaoRow, CategoriaGasto, DividaFixaRow } from "@/types/database";
+import type { CartaoRow, DividaFixaRow } from "@/types/database";
 import { FormComErro } from "@/components/FormComErro";
 import { SubmitButton } from "@/components/SubmitButton";
 import { Campo } from "@/components/Campo";
 import { CampoValorMonetario } from "@/components/CampoValorMonetario";
-import { DividaFixaLinha } from "@/components/DividaFixaLinha";
+import { PainelDividasFixas } from "@/components/PainelDividasFixas";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
-import { CategoriaPill, ROTULOS_CATEGORIA, SeletorCategoria, ordemCategorias } from "@/components/CategoriaGasto";
-import { formatarBRL, mesAtual } from "@/lib/calc";
+import { SeletorCategoria } from "@/components/CategoriaGasto";
+import { mesAtual } from "@/lib/calc";
 
 export default async function DividasFixasPage() {
   const { supabase, usuario } = await exigirUsuarioComConta();
@@ -30,19 +31,15 @@ export default async function DividasFixasPage() {
     .order("nome");
   const cartoes = (cartoesData ?? []) as CartaoRow[];
 
-  const dividasAtivas = dividas.filter((d) => d.ativo);
-  const categorias: CategoriaGasto[] = ordemCategorias();
-  const totalPorCategoria = new Map<CategoriaGasto, number>(
-    categorias.map((c) => [c, dividasAtivas.filter((d) => d.categoria === c).reduce((acc, d) => acc + d.valor_centavos, 0)])
-  );
-
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h1 className="text-2xl font-bold">Dívidas fixas</h1>
+        <h1 className="text-2xl font-bold">Assinaturas e dívidas fixas</h1>
         <p className="text-sm text-foreground-muted">
-          Aluguel, empréstimos e qualquer compromisso recorrente — inclusive assinaturas cobradas
-          no cartão (Netflix, internet), se você marcar o cartão.
+          Tudo que se repete todo mês sem um fim definido, num só lugar: assinaturas, aluguel,
+          contas fixas e dinheiro que você deve pra alguém — inclusive assinaturas cobradas no
+          cartão (Netflix, internet), se você marcar o cartão. Compra parcelada de cartão (com fim
+          definido) fica no <Link href="/historico" className="font-medium text-verde-700 hover:underline">Histórico</Link>.
         </p>
       </div>
 
@@ -79,50 +76,7 @@ export default async function DividasFixasPage() {
         </FormComErro>
       </section>
 
-      {dividasAtivas.length > 0 && (
-        <section className="card p-6">
-          <h2 className="font-semibold">Resumo por categoria</h2>
-          <p className="mt-1 text-sm text-foreground-muted">
-            Pra saber, se precisar apertar o orçamento, o que dá pra cortar (assinatura) e o que
-            não dá (fixa essencial) — e separar o que é dívida com uma pessoa.
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {categorias
-              .filter((categoria) => dividasAtivas.some((d) => d.categoria === categoria))
-              .map((categoria) => (
-                <div key={categoria} className="rounded-lg border border-border p-4">
-                  <CategoriaPill categoria={categoria} />
-                  <p className="mt-2 text-xl font-bold">{formatarBRL(totalPorCategoria.get(categoria) ?? 0)}</p>
-                  <p className="text-xs text-foreground-muted">
-                    {dividasAtivas.filter((d) => d.categoria === categoria).length} item(ns) por mês
-                  </p>
-                </div>
-              ))}
-          </div>
-        </section>
-      )}
-
-      <section className="card p-6">
-        <h2 className="font-semibold">Suas dívidas fixas</h2>
-        {dividas.length === 0 ? (
-          <p className="mt-3 text-sm text-foreground-muted">Nenhuma dívida fixa cadastrada ainda.</p>
-        ) : (
-          categorias.map((categoria) => {
-            const doGrupo = dividas.filter((d) => d.categoria === categoria);
-            if (doGrupo.length === 0) return null;
-            return (
-              <div key={categoria} className="mt-4 first:mt-0">
-                <h3 className="text-sm font-semibold text-foreground-muted">{ROTULOS_CATEGORIA[categoria]}</h3>
-                <ul className="mt-2 flex flex-col gap-2">
-                  {doGrupo.map((divida) => (
-                    <DividaFixaLinha key={divida.id} divida={divida} cartoes={cartoes} />
-                  ))}
-                </ul>
-              </div>
-            );
-          })
-        )}
-      </section>
+      <PainelDividasFixas dividas={dividas} cartoes={cartoes} />
     </div>
   );
 }

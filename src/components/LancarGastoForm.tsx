@@ -2,12 +2,15 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { criarCompra } from "@/app/actions/compras";
+import { criarDividaFixa } from "@/app/actions/dividas-fixas";
 import { Campo } from "@/components/Campo";
 import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { InputValorMonetario } from "@/components/InputValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { SeletorModoValor, type ModoValor } from "@/components/SeletorModoValor";
+import { SeletorTipoLancamento, type TipoLancamento } from "@/components/SeletorTipoLancamento";
 import { SeletorCategoria } from "@/components/CategoriaGasto";
 import { mesAtual } from "@/lib/calc";
 import type { CartaoRow } from "@/types/database";
@@ -19,6 +22,7 @@ interface Divisao {
 
 export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
   const router = useRouter();
+  const [tipo, setTipo] = useState<TipoLancamento>(cartoes.length > 0 ? "parcelada" : "recorrente");
   const [modoValor, setModoValor] = useState<ModoValor>("total");
   const [responsavel, setResponsavel] = useState("eu");
   const [divisoes, setDivisoes] = useState<Divisao[]>([]);
@@ -26,6 +30,7 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
   const [enviando, setEnviando] = useState(false);
 
   const ehNos = responsavel === "eu";
+  const semCartaoParaParcelada = tipo === "parcelada" && cartoes.length === 0;
   const divisoesJson = useMemo(() => JSON.stringify(divisoes.map((d) => ({ nome: d.nome, valor: Number(d.valor) }))), [divisoes]);
 
   function adicionarDivisao() {
@@ -41,48 +46,98 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
   }
 
   async function aoSubmeter(formData: FormData) {
+    if (semCartaoParaParcelada) return;
+
     setErro(null);
     setEnviando(true);
     // atribuido_a já vem preenchido pelo campo hidden do SeletorResponsavel
     formData.set("divisoes_json", ehNos ? divisoesJson : "[]");
 
-    const resultado = await criarCompra(formData);
+    if (tipo === "recorrente") {
+      formData.set("recorrente", "on");
+    }
+
+    const resultado = tipo === "parcelada" ? await criarCompra(formData) : await criarDividaFixa(formData);
     setEnviando(false);
     if (resultado?.erro) {
       setErro(resultado.erro);
       return;
     }
-    router.push("/dashboard");
+    router.push(tipo === "parcelada" ? "/dashboard" : "/dividas-fixas");
   }
 
   return (
     <form action={aoSubmeter} className="card flex flex-col gap-4 p-6">
-      <label className="flex flex-col gap-1 text-sm font-medium">
-        Cartão
-        <select
-          name="cartao_id"
-          required
-          className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
-        >
-          {cartoes.map((c) => (
-            <option key={c.id} value={c.id}>
-              {c.nome}
-            </option>
-          ))}
-        </select>
-      </label>
-
       <div className="grid gap-4 sm:grid-cols-2">
-        <SeletorModoValor modo={modoValor} onMudar={setModoValor} />
-        <CampoValorMonetario
-          key={modoValor}
-          label={modoValor === "total" ? "Valor total" : "Valor de cada parcela"}
-          name="valor"
-          required
-        />
-        <Campo label="Número de parcelas" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
-        <Campo label="Mês de início" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
-        <Campo label="Descrição" name="descricao" placeholder="Ex.: Shopee (casamento)" required className="sm:col-span-2" />
+        <SeletorTipoLancamento tipo={tipo} onMudar={setTipo} />
+
+        {tipo === "parcelada" ? (
+          semCartaoParaParcelada ? (
+            <p className="rounded-lg bg-surface-muted px-4 py-3 text-sm text-foreground-muted sm:col-span-2">
+              Compra no cartão precisa de um cartão cadastrado primeiro.{" "}
+              <Link href="/cartoes" className="font-medium text-verde-700 hover:underline">
+                Cadastrar cartão →
+              </Link>
+            </p>
+          ) : (
+            <>
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Cartão
+                <select
+                  name="cartao_id"
+                  required
+                  className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
+                >
+                  {cartoes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <SeletorModoValor modo={modoValor} onMudar={setModoValor} />
+              <CampoValorMonetario
+                key={modoValor}
+                label={modoValor === "total" ? "Valor total" : "Valor de cada parcela"}
+                name="valor"
+                required
+              />
+              <Campo label="Número de parcelas" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
+              <Campo label="Mês de início" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
+              <Campo label="Descrição" name="descricao" placeholder="Ex.: Shopee (casamento)" required className="sm:col-span-2" />
+            </>
+          )
+        ) : (
+          <>
+            <Campo label="Nome" name="nome" placeholder="Ex.: Netflix, Internet, Aluguel" required className="sm:col-span-2" />
+            <CampoValorMonetario label="Valor mensal" name="valor" required />
+            <Campo label="Dia de vencimento" name="dia_vencimento" type="number" min={1} max={31} required />
+            <Campo label="Cobrando desde (mês)" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
+            <Campo
+              label="Mês final (opcional — ex.: empréstimo em 5x com data pra acabar)"
+              name="mes_fim"
+              type="month"
+            />
+            {cartoes.length > 0 && (
+              <label className="flex flex-col gap-1 text-sm font-medium">
+                Cobrada em algum cartão? (opcional)
+                <select
+                  name="cartao_id"
+                  defaultValue=""
+                  className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
+                >
+                  <option value="">Não — é paga direto (boleto, débito, etc.)</option>
+                  {cartoes.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.nome}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+          </>
+        )}
+
         <SeletorCategoria />
       </div>
 
@@ -129,19 +184,19 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
 
       {erro && <p className="rounded-lg bg-vermelho-100 px-3 py-2 text-sm text-vermelho-700">{erro}</p>}
 
-      <SubmitButtonManual enviando={enviando} />
+      {!semCartaoParaParcelada && <SubmitButtonManual enviando={enviando} tipo={tipo} />}
     </form>
   );
 }
 
-function SubmitButtonManual({ enviando }: { enviando: boolean }) {
+function SubmitButtonManual({ enviando, tipo }: { enviando: boolean; tipo: TipoLancamento }) {
   return (
     <button
       type="submit"
       disabled={enviando}
       className="w-fit rounded-lg bg-verde-600 px-6 py-2 text-sm font-semibold text-white hover:bg-verde-700 disabled:opacity-60"
     >
-      {enviando ? "Salvando..." : "Lançar gasto"}
+      {enviando ? "Salvando..." : tipo === "parcelada" ? "Lançar gasto" : "Cadastrar assinatura/dívida"}
     </button>
   );
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { exigirUsuarioComConta } from "@/lib/data/context";
 import { CompraCard } from "@/components/CompraCard";
 import type { CartaoRow, CompraRow, ParcelaRow, UsuarioRow } from "@/types/database";
@@ -72,7 +73,14 @@ export default async function HistoricoPage({
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold">Histórico completo</h1>
-        <p className="text-sm text-foreground-muted">Todas as compras já lançadas, para você nunca perder o rastro.</p>
+        <p className="text-sm text-foreground-muted">
+          Todas as compras parceladas no cartão já lançadas (com fim definido), para você nunca
+          perder o rastro. Assinatura, aluguel e dívida com pessoa (sem fim definido) ficam em{" "}
+          <Link href="/dividas-fixas" className="font-medium text-verde-700 hover:underline">
+            Assinaturas e dívidas
+          </Link>
+          .
+        </p>
       </div>
 
       <form className="card flex flex-wrap gap-3 p-6" method="get">

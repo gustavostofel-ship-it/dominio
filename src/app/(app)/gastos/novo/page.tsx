@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { exigirUsuarioComConta } from "@/lib/data/context";
 import type { CartaoRow } from "@/types/database";
 import { LancarGastoForm } from "@/components/LancarGastoForm";
@@ -20,20 +19,12 @@ export default async function NovoGastoPage() {
       <div>
         <h1 className="text-2xl font-bold">Lançar novo gasto</h1>
         <p className="text-sm text-foreground-muted">
-          Escolha o cartão, o valor, o parcelamento e dê um nome para o gasto.
+          Uma compra no cartão (tem fim definido) ou uma assinatura/dívida fixa (sem fim definido,
+          até você cancelar) — escolha o tipo abaixo.
         </p>
       </div>
 
-      {cartoes.length === 0 ? (
-        <p className="card p-6 text-sm text-foreground-muted">
-          Cadastre um cartão antes de lançar um gasto.{" "}
-          <Link href="/cartoes" className="font-medium text-verde-700 hover:underline">
-            Ir para Cartões →
-          </Link>
-        </p>
-      ) : (
-        <LancarGastoForm cartoes={cartoes} />
-      )}
+      <LancarGastoForm cartoes={cartoes} />
     </div>
   );
 }

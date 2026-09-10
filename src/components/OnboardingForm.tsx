@@ -9,13 +9,13 @@ import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { InputValorMonetario } from "@/components/InputValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { SeletorModoValor, type ModoValor } from "@/components/SeletorModoValor";
-import { SeletorTipoMigracao, type TipoMigracao } from "@/components/SeletorTipoMigracao";
+import { SeletorTipoLancamento, type TipoLancamento } from "@/components/SeletorTipoLancamento";
 import { SeletorCategoria } from "@/components/CategoriaGasto";
 import { mesAtual, formatarBRL, reaisParaCentavos } from "@/lib/calc";
 import type { CartaoRow } from "@/types/database";
 
 interface ItemLancado {
-  tipo: TipoMigracao;
+  tipo: TipoLancamento;
   nome: string;
   valor: string;
   detalhe: string;
@@ -27,7 +27,7 @@ interface Divisao {
 }
 
 export function OnboardingForm({ cartoes }: { cartoes: CartaoRow[] }) {
-  const [tipo, setTipo] = useState<TipoMigracao>(cartoes.length > 0 ? "parcelada" : "recorrente");
+  const [tipo, setTipo] = useState<TipoLancamento>(cartoes.length > 0 ? "parcelada" : "recorrente");
   const [lancadas, setLancadas] = useState<ItemLancado[]>([]);
   const [erro, setErro] = useState<string | null>(null);
   const [enviando, setEnviando] = useState(false);
@@ -103,7 +103,7 @@ export function OnboardingForm({ cartoes }: { cartoes: CartaoRow[] }) {
   return (
     <div className="flex flex-col gap-6">
       <form action={aoSubmeter} className="card grid gap-4 p-6 sm:grid-cols-2">
-        <SeletorTipoMigracao tipo={tipo} onMudar={setTipo} />
+        <SeletorTipoLancamento tipo={tipo} onMudar={setTipo} />
 
         {tipo === "parcelada" ? (
           semCartaoParaParcelada ? (
