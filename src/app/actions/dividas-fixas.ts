@@ -114,21 +114,32 @@ export async function criarDividaFixaOnboarding(formData: FormData): Promise<Res
 }
 
 /**
- * Encerra uma dívida fixa a partir de agora, sem apagar o histórico: define
- * mes_fim = mês atual, então este mês ainda conta normalmente (você ainda
- * deve/pagou esse último ciclo), mas a partir do mês que vem ela some
- * sozinha do dashboard, da fatura e da projeção — sem precisar arquivar
- * (o que a removeria também do mês atual).
+ * Encerra uma dívida fixa recorrente, sem apagar o histórico: define
+ * mes_fim com o mês escolhido pelo usuário (não necessariamente o mês
+ * atual) — os meses até mes_fim (inclusive) continuam contando
+ * normalmente e só a partir do mês seguinte ela some sozinha do
+ * dashboard, da fatura e da projeção. Diferente de arquivar (que some até
+ * do mês atual).
+ *
+ * O mês certo pra escolher depende de como ela é cobrada: numa dívida com
+ * pessoa combinada informalmente costuma ser o mês atual mesmo, mas numa
+ * assinatura cobrada no cartão, se a fatura do ciclo atual já fechou antes
+ * do cancelamento, a cobrança ainda cai na fatura do mês seguinte — nesse
+ * caso o usuário deve escolher o mês seguinte, não o atual.
  */
-export async function encerrarDividaFixaAgora(formData: FormData): Promise<ResultadoAcao> {
+export async function encerrarDividaFixa(formData: FormData): Promise<ResultadoAcao> {
   const { supabase, usuario } = await exigirUsuarioComConta();
   const id = String(formData.get("id") ?? "");
+  const mesFim = String(formData.get("mes_fim") ?? "").trim();
+
   if (!id) return { erro: "Dívida inválida." };
+  if (!/^\d{4}-\d{2}$/.test(mesFim)) return { erro: "Escolha até qual mês essa dívida ainda deve contar." };
+  if (mesFim < mesAtual()) return { erro: "Não dá pra encerrar num mês que já passou — use Editar." };
 
   const { error } = await supabase
     .from("dividas_fixas")
     .update({
-      mes_fim: mesRefParaData(mesAtual()),
+      mes_fim: mesRefParaData(mesFim),
       editado_por: usuario.id,
       editado_em: new Date().toISOString(),
     })
