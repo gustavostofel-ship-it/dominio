@@ -11,17 +11,23 @@ export type TipoLancamento = "parcelada" | "recorrente";
  *   geladeira em 8x, empréstimo em 12x, compra do dia a dia à vista/1x).
  *   Vira uma compra no cartão.
  * - "recorrente": não tem fim definido, continua cobrando todo mês até
- *   você decidir cancelar (ex.: assinatura tipo Netflix, internet, conta
- *   de luz, aluguel, uma dívida com uma pessoa que ainda não sabe quando
- *   acaba). Vira uma dívida fixa, sem "número de parcelas" — e já nasce
- *   pronta pra usar o "Encerrar" quando você cancelar.
+ *   você decidir cancelar (ex.: assinatura tipo Netflix, dinheiro que
+ *   você deve pra uma pessoa). Vira um lançamento recorrente, sem
+ *   "número de parcelas" — e já nasce pronto pra usar o "Encerrar" quando
+ *   você cancelar. Dívida fixa essencial (aluguel, luz, água) tem área
+ *   própria de cadastro — não é esse tipo aqui.
  */
 export function SeletorTipoLancamento({
   tipo,
   onMudar,
+  rotuloRecorrente = "Assinatura / dívida fixa",
+  descricaoRecorrente = "Sem fim definido, continua até você cancelar — assinatura, aluguel, conta de luz, dívida com uma pessoa.",
 }: {
   tipo: TipoLancamento;
   onMudar: (tipo: TipoLancamento) => void;
+  /** Personaliza o rótulo da opção "recorrente" — em Lançar gasto isso exclui dívida fixa essencial, que tem área própria. */
+  rotuloRecorrente?: string;
+  descricaoRecorrente?: string;
 }) {
   return (
     <div className="flex flex-col gap-2 sm:col-span-2">
@@ -57,12 +63,9 @@ export function SeletorTipoLancamento({
               onChange={() => onMudar("recorrente")}
               className="h-4 w-4 accent-verde-600"
             />
-            Assinatura / dívida fixa
+            {rotuloRecorrente}
           </span>
-          <span className="text-foreground-muted">
-            Sem fim definido, continua até você cancelar — assinatura, aluguel, conta de luz,
-            dívida com uma pessoa.
-          </span>
+          <span className="text-foreground-muted">{descricaoRecorrente}</span>
         </label>
       </div>
     </div>

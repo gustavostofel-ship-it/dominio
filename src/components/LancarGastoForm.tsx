@@ -69,7 +69,12 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
   return (
     <form action={aoSubmeter} className="card flex flex-col gap-4 p-6">
       <div className="grid gap-4 sm:grid-cols-2">
-        <SeletorTipoLancamento tipo={tipo} onMudar={setTipo} />
+        <SeletorTipoLancamento
+          tipo={tipo}
+          onMudar={setTipo}
+          rotuloRecorrente="Assinatura / dinheiro emprestado"
+          descricaoRecorrente="Sem fim definido, continua até você cancelar — assinatura ou dívida com uma pessoa. Dívida fixa essencial (aluguel, luz, água) se cadastra em Assinaturas e dívidas."
+        />
 
         {tipo === "parcelada" ? (
           semCartaoParaParcelada ? (
@@ -105,6 +110,7 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
               <Campo label="Número de parcelas" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
               <Campo label="Mês de início" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
               <Campo label="Descrição" name="descricao" placeholder="Ex.: Shopee (casamento)" required className="sm:col-span-2" />
+              <SeletorCategoria />
             </>
           )
         ) : (
@@ -135,10 +141,9 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
                 </select>
               </label>
             )}
+            <SeletorCategoria defaultValue="assinatura" categoriasDisponiveis={["assinatura", "divida_pessoa", "lazer", "outros"]} />
           </>
         )}
-
-        <SeletorCategoria />
       </div>
 
       <SeletorResponsavel rotulo="De quem é esse gasto?" aoMudar={setResponsavel} />
@@ -196,7 +201,7 @@ function SubmitButtonManual({ enviando, tipo }: { enviando: boolean; tipo: TipoL
       disabled={enviando}
       className="w-fit rounded-lg bg-verde-600 px-6 py-2 text-sm font-semibold text-white hover:bg-verde-700 disabled:opacity-60"
     >
-      {enviando ? "Salvando..." : tipo === "parcelada" ? "Lançar gasto" : "Cadastrar assinatura/dívida"}
+      {enviando ? "Salvando..." : tipo === "parcelada" ? "Lançar gasto" : "Cadastrar assinatura/dívida com pessoa"}
     </button>
   );
 }

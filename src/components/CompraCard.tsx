@@ -9,6 +9,7 @@ import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { SeletorModoValor, type ModoValor } from "@/components/SeletorModoValor";
 import { CategoriaPill, SeletorCategoria } from "@/components/CategoriaGasto";
+import { CartaoPill } from "@/components/CartaoPill";
 import { formatarBRL } from "@/lib/calc";
 import type { CartaoRow, CompraRow, ParcelaRow } from "@/types/database";
 
@@ -114,12 +115,12 @@ export function CompraCard({
         <div>
           <p className="flex flex-wrap items-center gap-2 font-semibold">
             {compra.descricao}
+            <CartaoPill nome={cartao?.nome ?? "cartão removido"} cartaoId={compra.cartao_id} />
             <CategoriaPill categoria={compra.categoria} />
             {ehTerceiro && <span className="status-pill status-pill--amarelo">de {compra.atribuido_a}</span>}
           </p>
           <p className="text-xs text-foreground-muted">
-            {cartao?.nome ?? "cartão removido"} · {compra.numero_parcelas}x · lançado por {nomeCriador} em{" "}
-            {dataFormatada} às {horaFormatada}
+            {compra.numero_parcelas}x · lançado por {nomeCriador} em {dataFormatada} às {horaFormatada}
           </p>
         </div>
         <div className="flex items-center gap-3">
