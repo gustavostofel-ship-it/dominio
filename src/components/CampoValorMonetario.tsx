@@ -27,7 +27,7 @@ export function CampoValorMonetario({
   className?: string;
 }) {
   const [centavosDigitados, setCentavosDigitados] = useState<string>(() =>
-    defaultValueReais ? String(Math.round(defaultValueReais * 100)) : ""
+    defaultValueReais != null ? String(Math.round(defaultValueReais * 100)) : ""
   );
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -40,7 +40,8 @@ export function CampoValorMonetario({
   useEffect(() => {
     const form = inputRef.current?.closest("form");
     if (!form) return;
-    const aoResetar = () => setCentavosDigitados(defaultValueReais ? String(Math.round(defaultValueReais * 100)) : "");
+    const aoResetar = () =>
+      setCentavosDigitados(defaultValueReais != null ? String(Math.round(defaultValueReais * 100)) : "");
     form.addEventListener("reset", aoResetar);
     return () => form.removeEventListener("reset", aoResetar);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- só precisa religar se o form mudar

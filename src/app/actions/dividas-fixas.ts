@@ -69,6 +69,10 @@ export async function atualizarDividaFixa(formData: FormData): Promise<Resultado
 
   if (!id || !nome) return { erro: "Dados inválidos." };
   if (!["fixa", "assinatura", "divida_pessoa", "lazer", "outros"].includes(categoria)) return { erro: "Categoria inválida." };
+  if (!Number.isFinite(valor) || valor <= 0) return { erro: "Valor inválido." };
+  if (!Number.isInteger(diaVencimento) || diaVencimento < 1 || diaVencimento > 31) {
+    return { erro: "Dia de vencimento inválido." };
+  }
 
   const { error } = await supabase
     .from("dividas_fixas")

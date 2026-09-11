@@ -2,12 +2,28 @@
 
 import { revalidatePath } from "next/cache";
 import { exigirUsuarioComConta } from "@/lib/data/context";
-import { gerarParcelas, reaisParaCentavos, mesAtual } from "@/lib/calc";
+import { gerarParcelas, reaisParaCentavos, mesAtual, assertMesRef } from "@/lib/calc";
 import type { ResultadoAcao } from "./auth";
 
 interface DivisaoInput {
   nome: string;
   valor: number;
+}
+
+/**
+ * `gerarParcelas`/`somarMeses` lançam exceção (via `assertMesRef`) se
+ * `mesInicio` não vier no formato "YYYY-MM" — precisa ser checado ANTES de
+ * qualquer mutação no banco (insert da compra, delete de parcelas antigas),
+ * senão a exceção sobe no meio do processo e deixa dado pela metade
+ * (compra sem parcela, ou parcelas apagadas sem novas no lugar).
+ */
+function mesInicioValido(mesInicio: string): boolean {
+  try {
+    assertMesRef(mesInicio);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 async function inserirCompraComParcelas(params: {
@@ -28,6 +44,7 @@ async function inserirCompraComParcelas(params: {
   if (!Number.isFinite(valor) || valor <= 0) return { erro: "Valor inválido." };
   if (!Number.isInteger(numeroParcelas) || numeroParcelas < 1) return { erro: "Número de parcelas inválido." };
   if (!mesInicio) return { erro: "Informe o mês de início." };
+  if (!mesInicioValido(mesInicio)) return { erro: "Mês de início inválido." };
   if (!["fixa", "assinatura", "divida_pessoa", "lazer", "outros"].includes(categoria)) {
     return { erro: "Categoria inválida." };
   }
@@ -194,6 +211,7 @@ export async function atualizarCompra(formData: FormData): Promise<ResultadoAcao
   if (!Number.isFinite(valor) || valor <= 0) return { erro: "Valor inválido." };
   if (!Number.isInteger(numeroParcelas) || numeroParcelas < 1) return { erro: "Número de parcelas inválido." };
   if (!mesInicio) return { erro: "Informe o mês de início." };
+  if (!mesInicioValido(mesInicio)) return { erro: "Mês de início inválido." };
   if (!["fixa", "assinatura", "divida_pessoa", "lazer", "outros"].includes(categoria)) {
     return { erro: "Categoria inválida." };
   }

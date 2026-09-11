@@ -43,6 +43,12 @@ export async function atualizarCartao(formData: FormData): Promise<ResultadoAcao
   const diaVencimento = Number(formData.get("dia_vencimento"));
 
   if (!id || !nome) return { erro: "Dados inválidos." };
+  if (!Number.isInteger(diaFechamento) || diaFechamento < 1 || diaFechamento > 31) {
+    return { erro: "Dia de fechamento inválido." };
+  }
+  if (!Number.isInteger(diaVencimento) || diaVencimento < 1 || diaVencimento > 31) {
+    return { erro: "Dia de vencimento inválido." };
+  }
 
   const { error } = await supabase
     .from("cartoes")

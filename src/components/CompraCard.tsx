@@ -18,11 +18,16 @@ export function CompraCard({
   parcelas,
   cartoes,
   nomeCriador,
+  temDivisao,
 }: {
   compra: CompraRow;
   parcelas: ParcelaRow[];
   cartoes: CartaoRow[];
   nomeCriador: string;
+  /** Se true, essa compra tem divisão de gasto lançada (alguém te deve uma
+   * parte) — editar valor/parcelas aqui NÃO recalcula essa divisão, então
+   * avisamos pra não confundir o que aparece em "A receber". */
+  temDivisao?: boolean;
 }) {
   const [editando, setEditando] = useState(false);
   const [confirmandoExclusao, setConfirmandoExclusao] = useState(false);
@@ -91,6 +96,13 @@ export function CompraCard({
             Atenção: editar recalcula todas as parcelas do zero — qualquer parcela já marcada como
             paga ou quitada antecipadamente volta para pendente.
           </p>
+          {temDivisao && (
+            <p className="rounded-lg bg-amber-100 px-3 py-2 text-xs text-amber-800 sm:col-span-2">
+              Essa compra tem divisão de gasto lançada (alguém te deve uma parte) — editar aqui
+              NÃO recalcula esse valor a receber, que fica desatualizado. Se o valor mudou, exclua
+              essa compra e lance de novo (a divisão é apagada junto).
+            </p>
+          )}
           <div className="flex gap-2 sm:col-span-2">
             <SubmitButton>Salvar</SubmitButton>
             <button

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { exigirUsuarioComConta } from "@/lib/data/context";
 import { CompraCard } from "@/components/CompraCard";
-import type { CartaoRow, CompraRow, ParcelaRow, UsuarioRow } from "@/types/database";
+import type { CartaoRow, CompraRow, DivisaoGastoRow, ParcelaRow, UsuarioRow } from "@/types/database";
 
 interface FiltrosHistorico {
   q?: string;
@@ -44,6 +44,15 @@ export default async function HistoricoPage({
       ? await supabase.from("parcelas").select("*").in("compra_id", idsCompras)
       : { data: [] };
   const parcelas = (parcelasData ?? []) as ParcelaRow[];
+
+  // Editar uma compra não atualiza divisões de gasto já lançadas (ver
+  // atualizarCompra) — avisamos no card pra ninguém editar achando que o
+  // valor a receber vai se ajustar sozinho.
+  const { data: divisoesData } =
+    idsCompras.length > 0
+      ? await supabase.from("divisoes_gasto").select("compra_id").in("compra_id", idsCompras)
+      : { data: [] };
+  const comprasComDivisao = new Set(((divisoesData ?? []) as Pick<DivisaoGastoRow, "compra_id">[]).map((d) => d.compra_id));
 
   const { data: usuariosData } = await supabase.from("usuarios").select("*").eq("conta_id", usuario.conta_id);
   const usuarios = new Map(((usuariosData ?? []) as UsuarioRow[]).map((u) => [u.id, u.nome]));
@@ -122,6 +131,7 @@ export default async function HistoricoPage({
               parcelas={parcelasPorCompra.get(compra.id) ?? []}
               cartoes={cartoes}
               nomeCriador={usuarios.get(compra.criado_por ?? "") ?? "—"}
+              temDivisao={comprasComDivisao.has(compra.id)}
             />
           ))
         )}
