@@ -19,6 +19,7 @@ import type {
   ConfiguracoesRow,
   DividaFixaRow,
   DividaFixaStatusRow,
+  DivisaoGastoRow,
   ParcelaRow,
 } from "@/types/database";
 
@@ -28,9 +29,12 @@ export interface DadosProjecao {
   configuracoes: ConfiguracoesRow;
   cartoesPorId: Map<string, CartaoRow>;
   dividasFixasPorId: Map<string, DividaFixaRow>;
+  comprasPorId: Map<string, CompraRow>;
   nomesParcelas: Map<string, string>; // parcela.id -> descrição da compra
   parcelaCartaoId: Map<string, string>; // parcela.id -> cartao_id
   parcelaCategoria: Map<string, CategoriaGasto>; // parcela.id -> categoria da compra
+  /** Divisões de gasto ainda a cobrar (alguém te deve) dentro do período carregado. */
+  divisoesAReceber: DivisaoGastoRow[];
 }
 
 /**
@@ -48,7 +52,7 @@ export async function carregarProjecao(
   const meses = gerarSequenciaDeMeses(mesInicio, quantidadeMeses);
   const mesFinal = meses[meses.length - 1];
 
-  const [cartoesRes, comprasRes, parcelasRes, dividasRes, statusRes, configRes] = await Promise.all([
+  const [cartoesRes, comprasRes, parcelasRes, dividasRes, statusRes, configRes, divisoesRes] = await Promise.all([
     supabase.from("cartoes").select("*").eq("conta_id", usuario.conta_id),
     supabase.from("compras").select("*").eq("conta_id", usuario.conta_id),
     supabase
@@ -65,6 +69,13 @@ export async function carregarProjecao(
       .gte("mes_referencia", `${mesInicio}-01`)
       .lte("mes_referencia", `${mesFinal}-28`),
     supabase.from("configuracoes").select("*").eq("conta_id", usuario.conta_id).maybeSingle(),
+    supabase
+      .from("divisoes_gasto")
+      .select("*")
+      .eq("conta_id", usuario.conta_id)
+      .eq("status", "a_cobrar")
+      .gte("mes_referencia", `${mesInicio}-01`)
+      .lte("mes_referencia", `${mesFinal}-28`),
   ]);
 
   const cartoes = (cartoesRes.data ?? []) as CartaoRow[];
@@ -72,6 +83,7 @@ export async function carregarProjecao(
   const parcelas = (parcelasRes.data ?? []) as ParcelaRow[];
   const dividasFixas = (dividasRes.data ?? []) as DividaFixaRow[];
   const statusOverrides = (statusRes.data ?? []) as DividaFixaStatusRow[];
+  const divisoesAReceber = (divisoesRes.data ?? []) as DivisaoGastoRow[];
   const configuracoes = (configRes.data as ConfiguracoesRow | null) ?? {
     conta_id: usuario.conta_id,
     renda_mensal_esperada_centavos: 0,
@@ -145,9 +157,11 @@ export async function carregarProjecao(
     configuracoes,
     cartoesPorId,
     dividasFixasPorId,
+    comprasPorId,
     nomesParcelas,
     parcelaCartaoId,
     parcelaCategoria,
+    divisoesAReceber,
   };
 }
 
@@ -173,6 +187,29 @@ export function calcularGastosPorCategoria(dados: DadosProjecao, mes: MesRef): M
   }
 
   return totais;
+}
+
+/**
+ * Total de divisões de gasto a receber (o que outras pessoas te devem por
+ * gastos divididos) num mês — e como isso se distribui por cartão, já que
+ * a fatura do cartão cobra o valor CHEIO (o banco não sabe de divisão),
+ * então "quanto sobra pra você de fato" é o total da fatura menos isso.
+ */
+export function calcularAReceberNoMes(
+  dados: DadosProjecao,
+  mes: MesRef
+): { totalCentavos: number; porCartao: Map<string | null, number> } {
+  const porCartao = new Map<string | null, number>();
+  let totalCentavos = 0;
+
+  for (const d of dados.divisoesAReceber) {
+    if (d.mes_referencia.slice(0, 7) !== mes) continue;
+    totalCentavos += d.valor_centavos;
+    const cartaoId = dados.comprasPorId.get(d.compra_id)?.cartao_id ?? null;
+    porCartao.set(cartaoId, (porCartao.get(cartaoId) ?? 0) + d.valor_centavos);
+  }
+
+  return { totalCentavos, porCartao };
 }
 
 export function statusDoResumo(resumo: ResumoMes, config: ConfiguracoesRow): StatusFinanceiro {

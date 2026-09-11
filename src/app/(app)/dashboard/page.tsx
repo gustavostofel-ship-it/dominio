@@ -1,7 +1,7 @@
 import Link from "next/link";
 import clsx from "clsx";
 import { exigirUsuarioComConta } from "@/lib/data/context";
-import { carregarProjecao, calcularGastosPorCategoria, statusDoResumo } from "@/lib/data/projecao";
+import { carregarProjecao, calcularGastosPorCategoria, calcularAReceberNoMes, statusDoResumo } from "@/lib/data/projecao";
 import { mesAtual, somarMeses, formatarBRL } from "@/lib/calc";
 import { StatusPill } from "@/components/StatusPill";
 import { StatusGauge } from "@/components/StatusGauge";
@@ -66,6 +66,8 @@ export default async function DashboardPage({
   }
 
   const gastosPorCategoria = calcularGastosPorCategoria(dados, mesSelecionado);
+  const aReceber = calcularAReceberNoMes(dados, mesSelecionado);
+  const totalLiquidoCentavos = resumo.totalDevidoCentavos - aReceber.totalCentavos;
 
   return (
     <div className="flex flex-col gap-6">
@@ -95,11 +97,23 @@ export default async function DashboardPage({
           <p className="text-4xl font-bold tracking-tight text-foreground">
             {formatarBRL(resumo.totalDevidoCentavos)}
           </p>
+          {aReceber.totalCentavos > 0 && (
+            <p className="text-sm text-foreground-muted">
+              Isso é a fatura cheia. Descontando o que vão te pagar de volta ({formatarBRL(aReceber.totalCentavos)}),
+              sobra <strong className="text-foreground">{formatarBRL(totalLiquidoCentavos)}</strong> pra sair do seu bolso de fato.
+            </p>
+          )}
           <div className="flex flex-wrap gap-6 text-sm">
             <div>
               <p className="text-foreground-muted">Já pago no mês</p>
               <p className="font-semibold text-verde-700">{formatarBRL(resumo.totalPagoCentavos)}</p>
             </div>
+            {aReceber.totalCentavos > 0 && (
+              <div>
+                <p className="text-foreground-muted">A receber de terceiros</p>
+                <p className="font-semibold text-verde-700">{formatarBRL(aReceber.totalCentavos)}</p>
+              </div>
+            )}
             {renda > 0 && (
               <div>
                 <p className="text-foreground-muted">Renda esperada</p>
@@ -132,12 +146,14 @@ export default async function DashboardPage({
               {Array.from(gruposPorCartao.entries()).map(([chave, grupo]) => {
                 const total = grupo.itens.reduce((acc, i) => acc + i.valorCentavos, 0);
                 const pendentes = grupo.itens.filter((i) => i.status === "pendente").length;
+                const aReceberDoCartao = aReceber.porCartao.get(grupo.cartaoId) ?? 0;
                 const conteudo = (
                   <>
                     <div>
                       <p className="font-medium">{grupo.nome}</p>
                       <p className="text-xs text-foreground-muted">
                         {grupo.itens.length} item(ns) · {pendentes} pendente(s)
+                        {aReceberDoCartao > 0 && <> · {formatarBRL(aReceberDoCartao)} a receber</>}
                       </p>
                     </div>
                     <p className="font-semibold">{formatarBRL(total)}</p>

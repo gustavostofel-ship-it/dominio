@@ -65,7 +65,7 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
       setErro(resultado.erro);
       return;
     }
-    router.push(tipo === "parcelada" ? "/dashboard" : "/dividas-fixas");
+    router.push("/dashboard");
   }
 
   return (
