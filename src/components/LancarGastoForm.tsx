@@ -11,6 +11,7 @@ import { InputValorMonetario } from "@/components/InputValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { SeletorModoValor, type ModoValor } from "@/components/SeletorModoValor";
 import { SeletorTipoGasto, type TipoGasto } from "@/components/SeletorTipoGasto";
+import { CampoCartaoEVencimento } from "@/components/CampoCartaoEVencimento";
 import { SeletorCategoria } from "@/components/CategoriaGasto";
 import { mesAtual } from "@/lib/calc";
 import type { CartaoRow } from "@/types/database";
@@ -118,26 +119,9 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
             <>
               <Campo label="Nome" name="nome" placeholder="Ex.: Netflix, Internet, um app novo" required className="sm:col-span-2" />
               <CampoValorMonetario label="Valor mensal" name="valor" required />
-              <Campo label="Dia de vencimento" name="dia_vencimento" type="number" min={1} max={31} required />
               <Campo label="Cobrando desde (mês)" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
+              <CampoCartaoEVencimento cartoes={cartoes} />
               <Campo label="Mês final (opcional, se já sabe quando termina)" name="mes_fim" type="month" />
-              {cartoes.length > 0 && (
-                <label className="flex flex-col gap-1 text-sm font-medium">
-                  Cobrada em algum cartão? (opcional)
-                  <select
-                    name="cartao_id"
-                    defaultValue=""
-                    className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
-                  >
-                    <option value="">Não — é paga direto (boleto, débito, etc.)</option>
-                    {cartoes.map((c) => (
-                      <option key={c.id} value={c.id}>
-                        {c.nome}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              )}
             </>
           ) : (
             <>
