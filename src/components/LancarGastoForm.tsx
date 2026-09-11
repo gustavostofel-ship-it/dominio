@@ -10,7 +10,7 @@ import { CampoValorMonetario } from "@/components/CampoValorMonetario";
 import { InputValorMonetario } from "@/components/InputValorMonetario";
 import { SeletorResponsavel } from "@/components/SeletorResponsavel";
 import { SeletorModoValor, type ModoValor } from "@/components/SeletorModoValor";
-import { SeletorTipoLancamento, type TipoLancamento } from "@/components/SeletorTipoLancamento";
+import { SeletorTipoGasto, type TipoGasto } from "@/components/SeletorTipoGasto";
 import { SeletorCategoria } from "@/components/CategoriaGasto";
 import { mesAtual } from "@/lib/calc";
 import type { CartaoRow } from "@/types/database";
@@ -22,7 +22,7 @@ interface Divisao {
 
 export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
   const router = useRouter();
-  const [tipo, setTipo] = useState<TipoLancamento>(cartoes.length > 0 ? "parcelada" : "recorrente");
+  const [tipo, setTipo] = useState<TipoGasto>(cartoes.length > 0 ? "parcelada" : "assinatura");
   const [modoValor, setModoValor] = useState<ModoValor>("total");
   const [responsavel, setResponsavel] = useState("eu");
   const [divisoes, setDivisoes] = useState<Divisao[]>([]);
@@ -53,8 +53,9 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
     // atribuido_a já vem preenchido pelo campo hidden do SeletorResponsavel
     formData.set("divisoes_json", ehNos ? divisoesJson : "[]");
 
-    if (tipo === "recorrente") {
+    if (tipo !== "parcelada") {
       formData.set("recorrente", "on");
+      formData.set("categoria", tipo === "assinatura" ? "assinatura" : "divida_pessoa");
     }
 
     const resultado = tipo === "parcelada" ? await criarCompra(formData) : await criarDividaFixa(formData);
@@ -69,81 +70,85 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
   return (
     <form action={aoSubmeter} className="card flex flex-col gap-4 p-6">
       <div className="grid gap-4 sm:grid-cols-2">
-        <SeletorTipoLancamento
-          tipo={tipo}
-          onMudar={setTipo}
-          rotuloRecorrente="Assinatura / dinheiro emprestado"
-          descricaoRecorrente="Sem fim definido, continua até você cancelar — assinatura ou dívida com uma pessoa. Dívida fixa essencial (aluguel, luz, água) se cadastra em Assinaturas e dívidas."
-        />
+        <SeletorTipoGasto tipo={tipo} onMudar={setTipo} />
 
-        {tipo === "parcelada" ? (
-          semCartaoParaParcelada ? (
-            <p className="rounded-lg bg-surface-muted px-4 py-3 text-sm text-foreground-muted sm:col-span-2">
-              Compra no cartão precisa de um cartão cadastrado primeiro.{" "}
-              <Link href="/cartoes" className="font-medium text-verde-700 hover:underline">
-                Cadastrar cartão →
-              </Link>
-            </p>
+        {/* Cada tipo remonta do zero (key={tipo}) — sem isso, o React reaproveita
+            os <input> de mesma posição/tipo entre as trocas e o valor digitado
+            num campo "vaza" pro campo equivalente do outro tipo (ex.: o mês
+            default de um formulário aparecendo no campo errado do outro). */}
+        <div key={tipo} className="contents">
+          {tipo === "parcelada" ? (
+            semCartaoParaParcelada ? (
+              <p className="rounded-lg bg-surface-muted px-4 py-3 text-sm text-foreground-muted sm:col-span-2">
+                Compra no cartão precisa de um cartão cadastrado primeiro.{" "}
+                <Link href="/cartoes" className="font-medium text-verde-700 hover:underline">
+                  Cadastrar cartão →
+                </Link>
+              </p>
+            ) : (
+              <>
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Cartão
+                  <select
+                    name="cartao_id"
+                    required
+                    className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
+                  >
+                    {cartoes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <SeletorModoValor modo={modoValor} onMudar={setModoValor} />
+                <CampoValorMonetario
+                  key={modoValor}
+                  label={modoValor === "total" ? "Valor total" : "Valor de cada parcela"}
+                  name="valor"
+                  required
+                />
+                <Campo label="Número de parcelas" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
+                <Campo label="Mês de início" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
+                <Campo label="Descrição" name="descricao" placeholder="Ex.: Shopee (casamento)" required className="sm:col-span-2" />
+                <SeletorCategoria />
+              </>
+            )
+          ) : tipo === "assinatura" ? (
+            <>
+              <Campo label="Nome" name="nome" placeholder="Ex.: Netflix, Internet, um app novo" required className="sm:col-span-2" />
+              <CampoValorMonetario label="Valor mensal" name="valor" required />
+              <Campo label="Dia de vencimento" name="dia_vencimento" type="number" min={1} max={31} required />
+              <Campo label="Cobrando desde (mês)" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
+              <Campo label="Mês final (opcional, se já sabe quando termina)" name="mes_fim" type="month" />
+              {cartoes.length > 0 && (
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Cobrada em algum cartão? (opcional)
+                  <select
+                    name="cartao_id"
+                    defaultValue=""
+                    className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
+                  >
+                    <option value="">Não — é paga direto (boleto, débito, etc.)</option>
+                    {cartoes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+            </>
           ) : (
             <>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Cartão
-                <select
-                  name="cartao_id"
-                  required
-                  className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
-                >
-                  {cartoes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <SeletorModoValor modo={modoValor} onMudar={setModoValor} />
-              <CampoValorMonetario
-                key={modoValor}
-                label={modoValor === "total" ? "Valor total" : "Valor de cada parcela"}
-                name="valor"
-                required
-              />
-              <Campo label="Número de parcelas" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
-              <Campo label="Mês de início" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
-              <Campo label="Descrição" name="descricao" placeholder="Ex.: Shopee (casamento)" required className="sm:col-span-2" />
-              <SeletorCategoria />
+              <Campo label="Nome da pessoa / do empréstimo" name="nome" placeholder="Ex.: Empréstimo da Ananda" required className="sm:col-span-2" />
+              <CampoValorMonetario label="Valor da parcela mensal" name="valor" required />
+              <Campo label="Dia de vencimento" name="dia_vencimento" type="number" min={1} max={31} required />
+              <Campo label="Cobrando desde (mês)" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
+              <Campo label="Mês final (opcional — ex.: combinaram pagar em 5x)" name="mes_fim" type="month" />
             </>
-          )
-        ) : (
-          <>
-            <Campo label="Nome" name="nome" placeholder="Ex.: Netflix, Internet, Aluguel" required className="sm:col-span-2" />
-            <CampoValorMonetario label="Valor mensal" name="valor" required />
-            <Campo label="Dia de vencimento" name="dia_vencimento" type="number" min={1} max={31} required />
-            <Campo label="Cobrando desde (mês)" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
-            <Campo
-              label="Mês final (opcional — ex.: empréstimo em 5x com data pra acabar)"
-              name="mes_fim"
-              type="month"
-            />
-            {cartoes.length > 0 && (
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Cobrada em algum cartão? (opcional)
-                <select
-                  name="cartao_id"
-                  defaultValue=""
-                  className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
-                >
-                  <option value="">Não — é paga direto (boleto, débito, etc.)</option>
-                  {cartoes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            <SeletorCategoria defaultValue="assinatura" categoriasDisponiveis={["assinatura", "divida_pessoa", "lazer", "outros"]} />
-          </>
-        )}
+          )}
+        </div>
       </div>
 
       <SeletorResponsavel rotulo="De quem é esse gasto?" aoMudar={setResponsavel} />
@@ -194,14 +199,15 @@ export function LancarGastoForm({ cartoes }: { cartoes: CartaoRow[] }) {
   );
 }
 
-function SubmitButtonManual({ enviando, tipo }: { enviando: boolean; tipo: TipoLancamento }) {
+function SubmitButtonManual({ enviando, tipo }: { enviando: boolean; tipo: TipoGasto }) {
+  const rotulo = tipo === "parcelada" ? "Lançar gasto" : tipo === "assinatura" ? "Cadastrar assinatura" : "Cadastrar dívida";
   return (
     <button
       type="submit"
       disabled={enviando}
       className="w-fit rounded-lg bg-verde-600 px-6 py-2 text-sm font-semibold text-white hover:bg-verde-700 disabled:opacity-60"
     >
-      {enviando ? "Salvando..." : tipo === "parcelada" ? "Lançar gasto" : "Cadastrar assinatura/dívida com pessoa"}
+      {enviando ? "Salvando..." : rotulo}
     </button>
   );
 }

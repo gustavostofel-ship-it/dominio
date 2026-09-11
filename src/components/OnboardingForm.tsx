@@ -105,83 +105,89 @@ export function OnboardingForm({ cartoes }: { cartoes: CartaoRow[] }) {
       <form action={aoSubmeter} className="card grid gap-4 p-6 sm:grid-cols-2">
         <SeletorTipoLancamento tipo={tipo} onMudar={setTipo} />
 
-        {tipo === "parcelada" ? (
-          semCartaoParaParcelada ? (
-            <p className="rounded-lg bg-surface-muted px-4 py-3 text-sm text-foreground-muted sm:col-span-2">
-              Compra parcelada precisa de um cartão cadastrado primeiro.{" "}
-              <Link href="/cartoes" className="font-medium text-verde-700 hover:underline">
-                Cadastrar cartão →
-              </Link>
-            </p>
+        {/* key={tipo} força remontar do zero ao trocar — sem isso o React
+            reaproveita <input>s de mesma posição/tipo entre os dois ramos e
+            um valor digitado (ou defaultValue) "vaza" pro campo equivalente
+            do outro tipo. */}
+        <div key={tipo} className="contents">
+          {tipo === "parcelada" ? (
+            semCartaoParaParcelada ? (
+              <p className="rounded-lg bg-surface-muted px-4 py-3 text-sm text-foreground-muted sm:col-span-2">
+                Compra parcelada precisa de um cartão cadastrado primeiro.{" "}
+                <Link href="/cartoes" className="font-medium text-verde-700 hover:underline">
+                  Cadastrar cartão →
+                </Link>
+              </p>
+            ) : (
+              <>
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Cartão
+                  <select
+                    name="cartao_id"
+                    required
+                    className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
+                  >
+                    {cartoes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <SeletorModoValor modo={modoValor} onMudar={setModoValor} />
+                <CampoValorMonetario
+                  key={modoValor}
+                  label={modoValor === "total" ? "Valor total restante" : "Valor de cada parcela"}
+                  name="valor"
+                  required
+                />
+                <Campo label="Parcelas restantes" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
+                <Campo
+                  label="Mês da próxima parcela a pagar"
+                  name="mes_inicio"
+                  type="month"
+                  defaultValue={mesAtual()}
+                  required
+                />
+                <Campo
+                  label="Nome (opcional)"
+                  name="descricao"
+                  placeholder='Deixe em branco para "Dívida migrada da planilha"'
+                  className="sm:col-span-2"
+                />
+              </>
+            )
           ) : (
             <>
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Cartão
-                <select
-                  name="cartao_id"
-                  required
-                  className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
-                >
-                  {cartoes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <SeletorModoValor modo={modoValor} onMudar={setModoValor} />
-              <CampoValorMonetario
-                key={modoValor}
-                label={modoValor === "total" ? "Valor total restante" : "Valor de cada parcela"}
-                name="valor"
-                required
-              />
-              <Campo label="Parcelas restantes" name="numero_parcelas" type="number" min={1} defaultValue={1} required />
-              <Campo
-                label="Mês da próxima parcela a pagar"
-                name="mes_inicio"
-                type="month"
-                defaultValue={mesAtual()}
-                required
-              />
               <Campo
                 label="Nome (opcional)"
-                name="descricao"
-                placeholder='Deixe em branco para "Dívida migrada da planilha"'
+                name="nome"
+                placeholder='Ex.: Netflix, Internet, Aluguel — em branco vira "Conta migrada da planilha"'
                 className="sm:col-span-2"
               />
+              <CampoValorMonetario label="Valor mensal" name="valor" required />
+              <Campo label="Dia de vencimento" name="dia_vencimento" type="number" min={1} max={31} required />
+              <Campo label="Cobrando desde (mês)" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
+              {cartoes.length > 0 && (
+                <label className="flex flex-col gap-1 text-sm font-medium">
+                  Cobrada em algum cartão? (opcional)
+                  <select
+                    name="cartao_id"
+                    defaultValue=""
+                    className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
+                  >
+                    <option value="">Não — é paga direto (boleto, débito, etc.)</option>
+                    {cartoes.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nome}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
             </>
-          )
-        ) : (
-          <>
-            <Campo
-              label="Nome (opcional)"
-              name="nome"
-              placeholder='Ex.: Netflix, Internet, Aluguel — em branco vira "Conta migrada da planilha"'
-              className="sm:col-span-2"
-            />
-            <CampoValorMonetario label="Valor mensal" name="valor" required />
-            <Campo label="Dia de vencimento" name="dia_vencimento" type="number" min={1} max={31} required />
-            <Campo label="Cobrando desde (mês)" name="mes_inicio" type="month" defaultValue={mesAtual()} required />
-            {cartoes.length > 0 && (
-              <label className="flex flex-col gap-1 text-sm font-medium">
-                Cobrada em algum cartão? (opcional)
-                <select
-                  name="cartao_id"
-                  defaultValue=""
-                  className="rounded-lg border border-border px-3 py-2 text-sm outline-none focus:border-verde-500 focus:ring-2 focus:ring-verde-100"
-                >
-                  <option value="">Não — é paga direto (boleto, débito, etc.)</option>
-                  {cartoes.map((c) => (
-                    <option key={c.id} value={c.id}>
-                      {c.nome}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-          </>
-        )}
+          )}
+        </div>
 
         <SeletorCategoria />
 
